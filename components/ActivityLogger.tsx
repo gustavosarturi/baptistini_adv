@@ -1,0 +1,281 @@
+"use client";
+
+import { useGameStore } from "@/lib/store";
+import { DifficultyLevel, TIER_MULTIPLIERS } from "@/lib/types";
+import { Briefcase, CheckCircle2, Clock, FileText, Scale, Zap } from "lucide-react";
+import { useState } from "react";
+
+export function ActivityLogger() {
+    const { addLog, currentUser, extraSettings, clients } = useGameStore();
+
+    const [formData, setFormData] = useState({
+        date: new Date().toISOString().split('T')[0],
+        client_name: "",
+        process_number: "",
+        description: "",
+        time_spent: "",
+        extra_type: ""
+    });
+
+    const [clientSearch, setClientSearch] = useState("");
+    const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
+
+    const filteredClients = clients.filter(c =>
+        c.name.toLowerCase().includes(clientSearch.toLowerCase())
+    );
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!currentUser || !formData.extra_type) return;
+
+        const selectedItem = extraSettings[formData.extra_type];
+
+        addLog({
+            ...formData,
+            complexity: selectedItem.type,
+            time_spent: Number(formData.time_spent) || 0,
+        });
+
+        // Reset form
+        setFormData({
+            date: new Date().toISOString().split('T')[0],
+            client_name: "",
+            process_number: "",
+            description: "",
+            time_spent: "",
+            extra_type: ""
+        });
+        setClientSearch("");
+
+        setIsSuccess(true);
+        setTimeout(() => setIsSuccess(false), 2000);
+    };
+
+    if (!currentUser) return null;
+
+    // Calculate Preview Logic
+    let previewBase = 0;
+    let previewMultiplier = 1;
+    let selectedType: DifficultyLevel = 'Light';
+
+    if (formData.extra_type) {
+        const setting = extraSettings[formData.extra_type];
+        if (setting) {
+            previewBase = setting.points;
+            selectedType = setting.type;
+            previewMultiplier = setting.type === 'Extra' ? 1 : TIER_MULTIPLIERS[currentUser.tier];
+        }
+    }
+
+    const previewTotal = previewBase * previewMultiplier;
+
+
+    return (
+        <div className="w-full max-w-md bg-secondary border border-zinc-800 rounded-2xl p-6 shadow-2xl relative overflow-hidden group">
+            {/* Dynamic Glow based on Difficulty */}
+            <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none transition-all duration-700
+         ${selectedType === 'Extra' ? 'bg-yellow-500/20' :
+                    selectedType === 'Hard' ? 'bg-red-500/20' :
+                        selectedType === 'Medium' ? 'bg-primary/10' : 'bg-blue-500/10'}
+      `} />
+
+            <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                <Scale className="text-primary" />
+                Registrar Atividade
+            </h2>
+
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                {/* Date Input */}
+                <div>
+                    <label className="block text-xs font-bold text-zinc-500 uppercase mb-1">Data</label>
+                    <input
+                        required
+                        type="date"
+                        value={formData.date}
+                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                        className="w-full bg-black/50 border border-zinc-700 rounded-lg px-3 py-2.5 text-white text-sm focus:border-primary outline-none"
+                    />
+                </div>
+
+                {/* Activity Selector */}
+                <div>
+                    <label className="block text-xs font-bold text-primary uppercase mb-1 flex items-center gap-1">
+                        <Zap size={12} />
+                        O que você fez?
+                    </label>
+                    <select
+                        required
+                        value={formData.extra_type}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            setFormData({ ...formData, extra_type: val });
+                        }}
+                        className="w-full bg-black/50 border border-zinc-700 rounded-lg px-3 py-2.5 text-white text-sm focus:border-primary outline-none cursor-pointer transition-all"
+                    >
+                        <option value="">Selecione uma atividade...</option>
+                        {(['Light', 'Medium', 'Hard', 'Extra'] as DifficultyLevel[]).map(type => {
+                            const items = Object.entries(extraSettings).filter(([_, s]) => s.type === type);
+                            if (items.length === 0) return null;
+
+                            return (
+                                <optgroup key={type} label={type === 'Extra' ? '🎁 INCENTIVOS / EXTRAS' : `🚀 TAREFA ${type.toUpperCase()}`}>
+                                    {items.sort().map(([key, s]) => (
+                                        <option key={key} value={key}>
+                                            {key} ({s.points > 0 ? '+' : ''}{s.points} pts)
+                                        </option>
+                                    ))}
+                                </optgroup>
+                            );
+                        })}
+                    </select>
+                </div>
+
+                {/* Client & Process Row */}
+                <div className="flex gap-3">
+                    <div className="flex-1 relative">
+                        <label className="block text-xs font-bold text-zinc-500 uppercase mb-1">Cliente</label>
+                        <div className="relative">
+                            <Briefcase className="absolute left-3 top-3 text-zinc-600 w-4 h-4" />
+                            <input
+                                required={selectedType !== 'Extra'}
+                                type="text"
+                                placeholder={selectedType === 'Extra' ? "Contexto (Opcional)" : "Pesquisar Cliente..."}
+                                value={formData.client_name || clientSearch}
+                                onFocus={() => setIsClientDropdownOpen(true)}
+                                onChange={(e) => {
+                                    setClientSearch(e.target.value);
+                                    if (formData.client_name) setFormData({ ...formData, client_name: "" });
+                                    setIsClientDropdownOpen(true);
+                                }}
+                                className="w-full bg-black/50 border border-zinc-700 rounded-lg pl-9 pr-3 py-2.5 text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                            />
+
+                            {isClientDropdownOpen && (selectedType !== 'Extra' || clientSearch) && (
+                                <div className="absolute z-50 w-full mt-1 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl overflow-hidden max-h-48 overflow-y-auto">
+                                    {filteredClients.length > 0 ? (
+                                        filteredClients.map(client => (
+                                            <button
+                                                key={client.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    setFormData({ ...formData, client_name: client.name });
+                                                    setClientSearch(client.name);
+                                                    setIsClientDropdownOpen(false);
+                                                }}
+                                                className="w-full text-left px-4 py-2 text-sm text-zinc-300 hover:bg-primary hover:text-black transition-colors border-b border-zinc-800 last:border-0"
+                                            >
+                                                {client.name}
+                                            </button>
+                                        ))
+                                    ) : (
+                                        <div className="px-4 py-3 text-xs text-zinc-600 italic">
+                                            Nenhum cliente encontrado
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    <div className="w-1/3">
+                        <label className="block text-xs font-bold text-zinc-500 uppercase mb-1">Processo #</label>
+                        <input
+                            type="text"
+                            placeholder="Opcional"
+                            value={formData.process_number}
+                            onChange={(e) => setFormData({ ...formData, process_number: e.target.value })}
+                            className="w-full bg-black/50 border border-zinc-700 rounded-lg px-3 py-2.5 text-white text-sm focus:border-primary outline-none"
+                        />
+                    </div>
+                </div>
+
+                {/* Task Description */}
+                <div>
+                    <label className="block text-xs font-bold text-zinc-500 uppercase mb-1">Descrição / Observações</label>
+                    <div className="relative">
+                        <FileText className="absolute left-3 top-3 text-zinc-600 w-4 h-4" />
+                        <input
+                            required={selectedType !== 'Extra'}
+                            type="text"
+                            placeholder="Descreva brevemente..."
+                            value={formData.description}
+                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            className="w-full bg-black/50 border border-zinc-700 rounded-lg pl-9 pr-3 py-2.5 text-white text-sm focus:border-primary outline-none"
+                        />
+                    </div>
+                </div>
+
+                {/* Time Input */}
+                <div className="flex gap-3 items-end">
+                    <div className="w-1/2">
+                        <label className="block text-xs font-bold text-zinc-500 uppercase mb-1">Tempo (Min)</label>
+                        <div className="relative">
+                            <Clock className="absolute left-3 top-3 text-zinc-600 w-4 h-4" />
+                            <input
+                                required
+                                type="number"
+                                placeholder="60"
+                                value={formData.time_spent}
+                                onChange={(e) => setFormData({ ...formData, time_spent: e.target.value })}
+                                className="w-full bg-black/50 border border-zinc-700 rounded-lg pl-9 pr-3 py-2.5 text-white text-sm focus:border-primary outline-none no-spinner"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Tier Indicator */}
+                    <div className="flex-1 bg-black/30 border border-zinc-800 rounded-lg p-2 flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase px-1">Seu Tier</span>
+                        <span className={`text-xs font-black px-2 py-0.5 rounded
+                            ${currentUser.tier === 'Diamond' ? 'bg-blue-500/20 text-blue-400' :
+                                currentUser.tier === 'Gold' ? 'bg-primary/20 text-primary' :
+                                    currentUser.tier === 'Silver' ? 'bg-zinc-400/20 text-zinc-400' : 'bg-red-400/20 text-red-100'}
+                        `}>
+                            {currentUser.tier} (×{TIER_MULTIPLIERS[currentUser.tier]})
+                        </span>
+                    </div>
+                </div>
+
+                {/* Dynamic Points Preview */}
+                <div className="text-center py-3 bg-black/40 rounded-xl mt-1 border border-white/5 shadow-inner">
+                    <span className="text-[10px] text-zinc-600 uppercase tracking-widest font-black">Impacto no Ranking</span>
+                    <div className="text-3xl font-black text-white flex items-center justify-center gap-2 mt-1">
+                        {selectedType === 'Extra' ? (
+                            <>
+                                <span className={previewTotal < 0 ? 'text-red-500' : 'text-yellow-500'}>
+                                    {previewTotal > 0 ? '+' : ''}{previewTotal}
+                                </span>
+                                <span className="text-xs font-bold text-zinc-600 uppercase">Pontos Fixos</span>
+                            </>
+                        ) : (
+                            <>
+                                <span className="text-zinc-600 text-lg">{previewBase}</span>
+                                <span className="text-zinc-700 text-sm">×</span>
+                                <span className="text-primary">{TIER_MULTIPLIERS[currentUser.tier]}</span>
+                                <span className="text-zinc-700 text-sm">=</span>
+                                <span className={`drop-shadow-[0_0_10px_rgba(255,215,0,0.3)] ${previewTotal === 0 ? 'text-zinc-600' : 'text-primary'}`}>
+                                    {previewTotal}
+                                </span>
+                                <span className="text-xs font-bold text-zinc-600 uppercase">PTS</span>
+                            </>
+                        )}
+                    </div>
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={!formData.extra_type}
+                    className="mt-2 w-full font-black text-black py-4 rounded-xl bg-primary hover:bg-yellow-400 disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95"
+                >
+                    {isSuccess ? (
+                        <>
+                            <CheckCircle2 size={20} />
+                            FEITO!
+                        </>
+                    ) : (
+                        "CONFIRMAR REGISTRO"
+                    )}
+                </button>
+            </form>
+        </div>
+    );
+}
