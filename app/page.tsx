@@ -80,7 +80,7 @@ export default function Home() {
 
   // Sync Clients from clients
   useEffect(() => {
-    if (!isAuthorized) return;
+    if (!isAuthorized || !db) return;
     
     console.log("Firestore: Syncing clients...");
     const unsubscribe = onSnapshot(collection(db, "clients"), (snapshot) => {
@@ -95,7 +95,7 @@ export default function Home() {
 
   // Sync Settings from settings/extra doc
   useEffect(() => {
-    if (!isAuthorized) return;
+    if (!isAuthorized || !db) return;
     
     console.log("Firestore: Syncing extraSettings...");
     const unsubscribe = onSnapshot(doc(db, "settings", "extra"), (snapshot) => {

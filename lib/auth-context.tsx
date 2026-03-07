@@ -28,6 +28,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        if (!auth) {
+            console.warn("Auth: Firebase not initialized. Skipping listener.");
+            setLoading(false);
+            return;
+        }
+
         console.log("Auth: Initializing listener...");
         const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
             console.log("Auth: State changed, user:", authUser?.email);
@@ -37,6 +43,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 console.log("Auth: Checking authorization for:", email);
                 
                 try {
+                    if (!db) throw new Error("Firestore not initialized");
+
                     const userDocRef = doc(db, "authorized_users", email);
                     const userDoc = await getDoc(userDocRef);
                     
@@ -95,6 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const signInWithGoogle = async () => {
+        if (!auth || !googleProvider) return;
         try {
             await signInWithPopup(auth, googleProvider);
         } catch (error) {
@@ -103,6 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const signOut = async () => {
+        if (!auth) return;
         try {
             await firebaseSignOut(auth);
         } catch (error) {

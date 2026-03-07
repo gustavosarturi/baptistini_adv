@@ -11,16 +11,20 @@ const firebaseConfig = {
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Log config Presence (masking values for safety)
-console.log("Firebase: Config loaded?", {
-    apiKey: !!firebaseConfig.apiKey,
-    projectId: !!firebaseConfig.projectId,
-});
+// Initialize Firebase - Only if we have an API Key (prevents build crashes)
+let auth: any = null;
+let db: any = null;
+let googleProvider: any = null;
 
-// Initialize Firebase
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const googleProvider = new GoogleAuthProvider();
+if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "undefined") {
+    try {
+        const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+        googleProvider = new GoogleAuthProvider();
+    } catch (error) {
+        console.error("Firebase initialization error:", error);
+    }
+}
 
 export { auth, db, googleProvider };
