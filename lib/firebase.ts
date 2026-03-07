@@ -11,6 +11,16 @@ const firebaseConfig = {
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+// Debug flags for Vercel troubleshooting
+if (typeof window !== "undefined") {
+    console.log("Firebase Config Status:", {
+        apiKey: !!firebaseConfig.apiKey,
+        authDomain: !!firebaseConfig.authDomain,
+        projectId: !!firebaseConfig.projectId,
+        env: process.env.NODE_ENV
+    });
+}
+
 // Initialize Firebase - Only if we have an API Key (prevents build crashes)
 let auth: Auth | null = null;
 let db: Firestore | null = null;
