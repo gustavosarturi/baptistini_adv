@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { Auth, getAuth, GoogleAuthProvider } from "firebase/auth";
+import { Firestore, getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -12,9 +12,9 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase - Only if we have an API Key (prevents build crashes)
-let auth: any = null;
-let db: any = null;
-let googleProvider: any = null;
+let auth: Auth | null = null;
+let db: Firestore | null = null;
+let googleProvider: GoogleAuthProvider | null = null;
 
 if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "undefined") {
     try {
