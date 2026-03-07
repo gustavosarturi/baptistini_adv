@@ -19,7 +19,7 @@ export function ClientRegistration() {
 
     const handleAddClient = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newClient.name) return;
+        if (!newClient.name || !db) return;
         
         try {
             await addDoc(collection(db, "clients"), {
@@ -34,6 +34,7 @@ export function ClientRegistration() {
     };
 
     const handleRemoveClient = async (id: string) => {
+        if (!db) return;
         try {
             await deleteDoc(doc(db, "clients", id));
         } catch (error) {

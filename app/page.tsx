@@ -32,7 +32,7 @@ export default function Home() {
 
   // Sync Users from authorized_users
   useEffect(() => {
-    if (!isAuthorized) return;
+    if (!isAuthorized || !db) return;
     
     console.log("Firestore: Syncing authorized_users...");
     const unsubscribe = onSnapshot(collection(db, "authorized_users"), (snapshot) => {
@@ -53,7 +53,7 @@ export default function Home() {
 
   // Sync Logs from activity_logs
   useEffect(() => {
-    if (!isAuthorized) return;
+    if (!isAuthorized || !db) return;
 
     console.log("Firestore: Syncing activity_logs...");
     const q = query(collection(db, "activity_logs"), orderBy("date", "desc"), limit(500));

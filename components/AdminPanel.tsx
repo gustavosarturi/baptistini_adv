@@ -26,6 +26,7 @@ export function AdminPanel() {
     }, [activeSubTab]);
 
     const fetchAuthorizedUsers = async () => {
+        if (!db) return;
         setIsLoadingAuth(true);
         try {
             const q = query(collection(db, "authorized_users"), orderBy("added_at", "desc"));
@@ -44,7 +45,7 @@ export function AdminPanel() {
 
     const handleAddAuthorizedUser = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newEmail) return;
+        if (!newEmail || !db) return;
 
         const email = newEmail.toLowerCase().trim();
         const userDocRef = doc(db, "authorized_users", email);
@@ -68,6 +69,7 @@ export function AdminPanel() {
     };
 
     const handleDeleteAuthorizedUser = async (email: string) => {
+        if (!db) return;
         try {
             await deleteDoc(doc(db, "authorized_users", email));
             fetchAuthorizedUsers();
@@ -134,6 +136,7 @@ export function AdminPanel() {
                                     <select
                                         value={user.tier}
                                         onChange={async (e) => {
+                                            if (!db) return;
                                             const newTier = e.target.value as UserTier;
                                             setTier(user.id, newTier);
                                             try {

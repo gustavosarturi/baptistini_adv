@@ -29,7 +29,7 @@ export function ActivityLogger() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!currentUser || !formData.extra_type) return;
+        if (!currentUser || !formData.extra_type || !db) return;
 
         const selectedItem = extraSettings[formData.extra_type];
         

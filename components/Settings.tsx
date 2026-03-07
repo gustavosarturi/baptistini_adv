@@ -19,6 +19,7 @@ export function Settings() {
     }, [extraSettings]);
 
     const handleSave = async () => {
+        if (!db) return;
         try {
             await setDoc(doc(db, "settings", "extra"), localExtraSettings);
             setIsSaved(true);
