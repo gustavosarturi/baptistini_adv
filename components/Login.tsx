@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/lib/auth-context";
 import { Trophy, LogIn } from "lucide-react";
+import { auth } from "@/lib/firebase";
 
 export function Login() {
     const { signInWithGoogle } = useAuth();
@@ -24,13 +25,29 @@ export function Login() {
                 </div>
 
                 <button
-                    onClick={signInWithGoogle}
-                    className="group relative w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-white text-black font-bold text-lg hover:bg-primary transition-all duration-300 active:scale-[0.98] overflow-hidden"
+                    onClick={() => {
+                        console.log("Login: Botão clicado!");
+                        if (!auth) {
+                            alert("ERRO: O Firebase não foi inicializado. Verifique se as variáveis de ambiente (NEXT_PUBLIC_FIREBASE_...) foram adicionadas no painel do Vercel e se você fez o 'Redeploy'.");
+                            return;
+                        }
+                        signInWithGoogle();
+                    }}
+                    className={`group relative w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-white text-black font-bold text-lg hover:bg-primary transition-all duration-300 active:scale-[0.98] overflow-hidden ${!auth ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                     <LogIn size={20} />
-                    Entrar com Google
+                    {auth ? "Entrar com Google" : "Firebase não configurado"}
                 </button>
+
+                {!auth && (
+                    <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
+                        <p className="text-[10px] text-red-500 font-black uppercase text-center leading-tight">
+                            ⚠️ AVISO: Variáveis de ambiente faltando no Vercel.<br/>
+                            O botão só funcionará após configurar o Firebase Settings.
+                        </p>
+                    </div>
+                )}
 
                 <p className="mt-8 text-center text-zinc-600 text-xs font-mono uppercase tracking-widest">
                     Acesso restrito a colaboradores
