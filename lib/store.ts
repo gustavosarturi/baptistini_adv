@@ -49,7 +49,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     })),
 
     removeExtraSetting: (name: string) => set((state) => {
-        const { [name]: _, ...rest } = state.extraSettings;
+        const rest = { ...state.extraSettings };
+        delete rest[name];
         return { extraSettings: rest };
     }),
 
