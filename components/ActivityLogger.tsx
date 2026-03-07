@@ -132,7 +132,7 @@ export function ActivityLogger() {
                     >
                         <option value="">Selecione uma atividade...</option>
                         {(['Light', 'Medium', 'Hard', 'Extra'] as DifficultyLevel[]).map(type => {
-                            const items = Object.entries(extraSettings).filter(([_, s]) => s.type === type);
+                            const items = Object.entries(extraSettings).filter(item => item[1].type === type);
                             if (items.length === 0) return null;
 
                             return (

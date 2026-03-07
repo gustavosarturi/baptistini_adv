@@ -3,7 +3,7 @@
 import { useGameStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth-context";
 import { MonthSelector } from "./MonthSelector";
-import { Calendar, Clock, User as UserIcon, Briefcase, FileText, Activity, Trash2, Filter, Search, X } from "lucide-react";
+import { Clock, Briefcase, Activity, Trash2, Filter } from "lucide-react";
 import { useState } from "react";
 
 export function History() {

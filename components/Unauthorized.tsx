@@ -26,6 +26,7 @@ export function Unauthorized() {
         <div className="flex flex-col gap-4">
           <div className="bg-zinc-800/50 p-4 rounded-xl border border-zinc-700/50 flex items-center gap-3">
             {user?.photoURL && (
+              /* eslint-disable-next-line @next/next/no-img-element */
               <img src={user.photoURL} alt={user.displayName || ""} className="w-10 h-10 rounded-full border border-zinc-600" />
             )}
             <div className="text-left overflow-hidden">

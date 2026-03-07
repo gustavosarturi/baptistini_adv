@@ -29,11 +29,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         console.log("Auth: Initializing listener...");
-        const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+        const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
             console.log("Auth: State changed, user:", authUser?.email);
             
-            const checkAuthorization = async (userObj: User) => {
-                const email = userObj.email?.toLowerCase() || "";
+            if (authUser) {
+                const email = authUser.email?.toLowerCase() || "";
                 console.log("Auth: Checking authorization for:", email);
                 
                 try {
@@ -44,19 +44,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         const userData = userDoc.data();
                         console.log("Auth: User authorized with role:", userData.role);
                         
-                        // Sync Google Profile Info back to Firestore Authorized User 
-                        // so admins can see their real name and photo
+                        // Sync Google Profile Info back to Firestore Authorized User
                         try {
-                            const updateData: any = {
+                            const updateData: Record<string, string> = {
                                 updated_at: new Date().toISOString(),
                             };
                             
-                            // Only update if Google has the info and it's different/missing
-                            if (userObj.displayName && (!userData.name || userData.name === "Administrador Inicial")) {
-                                updateData.name = userObj.displayName;
+                            if (authUser.displayName && (!userData.full_name || userData.full_name === "Administrador Inicial")) {
+                                updateData.full_name = authUser.displayName;
                             }
-                            if (userObj.photoURL) {
-                                updateData.avatar_url = userObj.photoURL;
+                            if (authUser.photoURL && !userData.avatar_url) {
+                                updateData.avatar_url = authUser.photoURL;
                             }
 
                             if (Object.keys(updateData).length > 1) {
@@ -78,14 +76,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setRole(null);
                     setIsAuthorized(false);
                 } finally {
-                    setUser(userObj);
+                    setUser(authUser);
                     setLoading(false);
-                    console.log("Auth: Finished check.");
                 }
-            };
-
-            if (authUser) {
-                checkAuthorization(authUser);
             } else {
                 console.log("Auth: No user logged in.");
                 setUser(null);

@@ -2,7 +2,7 @@
 
 import { useGameStore } from "@/lib/store";
 import { DifficultyLevel } from "@/lib/types";
-import { Save, Settings as SettingsIcon, Plus, Trash2, Lock } from "lucide-react";
+import { Save, Settings as SettingsIcon, Plus, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { doc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -45,7 +45,8 @@ export function Settings() {
     };
 
     const handleRemoveItem = (key: string) => {
-        const { [key]: _, ...rest } = localExtraSettings;
+        const rest = { ...localExtraSettings };
+        delete rest[key];
         setLocalExtraSettings(rest);
     };
 
@@ -167,7 +168,7 @@ export function Settings() {
 
                 <div className="mt-8 bg-zinc-900/30 p-4 rounded-xl border border-zinc-800/30 text-[10px] text-zinc-500 leading-relaxed max-w-2xl">
                     <p>
-                        <strong className="text-zinc-400">Nota:</strong> Itens marcados como 'Incentivo' somam pontos fixos. Itens marcados como 'Light/Medium/Hard' servem como atalhos no formulário de registro e seus pontos são multiplicados pelo Tier do associado.
+                        <strong className="text-zinc-400">Nota:</strong> Itens marcados como &apos;Incentivo&apos; somam pontos fixos. Itens marcados como &apos;Light/Medium/Hard&apos; servem como atalhos no formulário de registro e seus pontos são multiplicados pelo Tier do associado.
                     </p>
                 </div>
             </div>

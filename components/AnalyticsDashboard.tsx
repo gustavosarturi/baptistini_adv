@@ -1,7 +1,7 @@
 "use client";
 
 import { useGameStore } from "@/lib/store";
-import { BarChart3, Clock, TrendingUp, Users, Activity, Award, Filter, ArrowUpDown, Calendar, ChevronRight, Search, X, ChevronDown } from "lucide-react";
+import { Clock, TrendingUp, Users, Activity, Award, Filter, Search, X, ChevronDown } from "lucide-react";
 import { useMemo, useState, useRef, useEffect } from "react";
 import { MonthSelector } from "./MonthSelector";
 
@@ -108,10 +108,6 @@ export function AnalyticsDashboard() {
         return { sortedByTime, sortedByFrequency };
     }, [filteredLogs]);
 
-    const maxActivityFrequency = useMemo(() => {
-        const frequencies = Object.values(activityStats.sortedByFrequency).map(s => s[1].count);
-        return Math.max(...frequencies, 1);
-    }, [activityStats]);
 
     const maxActivityTime = useMemo(() => {
         const times = Object.values(activityStats.sortedByTime).map(s => s[1].time);
@@ -346,7 +342,7 @@ export function AnalyticsDashboard() {
                     </div>
 
                     <div className="h-[200px] flex items-end gap-2 sm:gap-4 px-2">
-                        {monthlyHoursStats.length > 0 ? monthlyHoursStats.map(([month, minutes], idx) => (
+                        {monthlyHoursStats.length > 0 ? monthlyHoursStats.map(([month, minutes]) => (
                             <div key={month} className="flex-1 flex flex-col items-center gap-4 group">
                                 <div className="w-full relative flex flex-col items-center">
                                     <div className="absolute -top-8 opacity-0 group-hover:opacity-100 transition-opacity bg-zinc-800 text-[10px] font-bold text-white px-2 py-1 rounded pointer-events-none z-10 whitespace-nowrap">

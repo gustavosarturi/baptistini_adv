@@ -1,7 +1,7 @@
 "use client";
 
 import { useGameStore } from "@/lib/store";
-import { Calendar, Clock, CreditCard } from "lucide-react";
+import { Clock, CreditCard } from "lucide-react";
 
 export function ActivityFeed() {
     const { logs, users } = useGameStore();

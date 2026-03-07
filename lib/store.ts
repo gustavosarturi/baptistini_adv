@@ -1,17 +1,11 @@
 import { create } from 'zustand';
 import { ActivityLog, DifficultyLevel, DEFAULT_EXTRA_VALUES, Profile, TIER_MULTIPLIERS, ExtraSetting, Client, UserTier } from './types';
-import { MOCK_USERS, INITIAL_LOGS } from './mock-data';
-
-const INITIAL_CLIENTS: Client[] = [];
 
 interface GameState {
     users: Profile[];
     logs: ActivityLog[];
     currentUser: Profile | null;
     clients: Client[];
-
-    // New Settings
-    // (pointSettings removed in favor of all-custom items)
 
     // Extra Points Settings
     extraSettings: Record<string, ExtraSetting>;
@@ -31,15 +25,7 @@ interface GameState {
     removeClient: (clientId: string) => void;
     updateClient: (clientId: string, data: Partial<Omit<Client, 'id' | 'created_at'>>) => void;
 
-    addLog: (id: string, data: {
-        date: string;
-        client_name: string;
-        process_number?: string;
-        description: string;
-        time_spent: number;
-        complexity: DifficultyLevel;
-        extra_type?: string;
-    }) => void;
+    addLog: (id: string, logData: Omit<ActivityLog, 'id' | 'user_id' | 'created_at' | 'base_points' | 'multiplier' | 'final_points'>) => void;
 
     removeLog: (logId: string) => void;
     setUsers: (users: Profile[]) => void;
@@ -56,35 +42,33 @@ export const useGameStore = create<GameState>((set, get) => ({
     clients: [],
 
     extraSettings: DEFAULT_EXTRA_VALUES,
-    setExtraSettings: (settings) => set({ extraSettings: settings }),
+    setExtraSettings: (settings: Record<string, ExtraSetting>) => set({ extraSettings: settings }),
 
-    addExtraSetting: (name, value, type) => set((state) => ({
+    addExtraSetting: (name: string, value: number, type: DifficultyLevel) => set((state) => ({
         extraSettings: { ...state.extraSettings, [name]: { points: value, type } }
     })),
 
-    removeExtraSetting: (name) => set((state) => {
+    removeExtraSetting: (name: string) => set((state) => {
         const { [name]: _, ...rest } = state.extraSettings;
         return { extraSettings: rest };
     }),
 
     selectedMonth: new Date().toISOString().slice(0, 7), // Current YYYY-MM
-    setSelectedMonth: (month) => set({ selectedMonth: month }),
+    setSelectedMonth: (month: string) => set({ selectedMonth: month }),
 
     setCurrentUser: (userId: string) => {
         const user = get().users.find((u) => u.id === userId) || null;
         set({ currentUser: user });
     },
 
-    setTier: (userId, tier) => {
+    setTier: (userId: string, tier: UserTier) => {
         set((state) => ({
             users: state.users.map(u => u.id === userId ? { ...u, tier } : u),
-            // Also update currentUser if it matches
             currentUser: state.currentUser?.id === userId ? { ...state.currentUser, tier } : state.currentUser
         }));
     },
 
-    // Client Management Implementation
-    addClient: (name, email, phone) => {
+    addClient: (name: string, email?: string, phone?: string) => {
         const newClient: Client = {
             id: Math.random().toString(36).substr(2, 9),
             name,
@@ -95,37 +79,37 @@ export const useGameStore = create<GameState>((set, get) => ({
         set((state) => ({ clients: [...state.clients, newClient] }));
     },
 
-    removeClient: (clientId) => {
+    removeClient: (clientId: string) => {
         set((state) => ({
             clients: state.clients.filter((c) => c.id !== clientId)
         }));
     },
 
-    updateClient: (clientId, data) => {
+    updateClient: (clientId: string, data: Partial<Omit<Client, 'id' | 'created_at'>>) => {
         set((state) => ({
             clients: state.clients.map((c) => c.id === clientId ? { ...c, ...data } : c)
         }));
     },
 
-    removeLog: (logId) => {
+    removeLog: (logId: string) => {
         set((state) => ({
             logs: state.logs.filter((log) => log.id !== logId)
         }));
     },
 
-    setUsers: (users) => set({ users }),
-    setLogs: (logs) => set({ logs }),
-    setClients: (clients) => set({ clients }),
+    setUsers: (users: Profile[]) => set({ users }),
+    setLogs: (logs: ActivityLog[]) => set({ logs }),
+    setClients: (clients: Client[]) => set({ clients }),
 
-    addLog: (id: string, data: any) => {
+    addLog: (id: string, logData: Omit<ActivityLog, 'id' | 'user_id' | 'created_at' | 'base_points' | 'multiplier' | 'final_points'>) => {
         const { currentUser, extraSettings } = get();
         if (!currentUser) return;
 
         let base_points = 0;
         let multiplier = TIER_MULTIPLIERS[currentUser.tier];
 
-        if (data.extra_type) {
-            const setting = extraSettings[data.extra_type];
+        if (logData.extra_type) {
+            const setting = extraSettings[logData.extra_type];
             if (setting) {
                 base_points = setting.points;
                 if (setting.type === 'Extra') multiplier = 1;
@@ -141,7 +125,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             base_points,
             multiplier,
             final_points,
-            ...data
+            ...logData
         };
 
         set((state) => ({ logs: [...state.logs, newLog] }));
@@ -155,7 +139,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 if (selectedMonth === 'all') {
                     return log.user_id === user.id;
                 }
-                const logMonth = log.date.slice(0, 7); // Extract YYYY-MM
+                const logMonth = log.date.slice(0, 7);
                 return log.user_id === user.id && logMonth === selectedMonth;
             });
             const score = userLogs.reduce((total, log) => total + log.final_points, 0);

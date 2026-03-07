@@ -13,10 +13,10 @@ import { Unauthorized } from "@/components/Unauthorized";
 import { useAuth } from "@/lib/auth-context";
 import { Trophy, LayoutDashboard, Settings as SettingsIcon, History as HistoryIcon, Users, BarChart3, ShieldCheck, LogOut } from "lucide-react";
 import { useState, useEffect } from "react";
-import { collection, onSnapshot, query, orderBy, limit, doc } from "firebase/firestore";
+import { onSnapshot, collection, doc, query, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useGameStore } from "@/lib/store";
-import { Profile, ActivityLog } from "@/lib/types";
+import { Profile, ActivityLog, Client, ExtraSetting } from "@/lib/types";
 
 export default function Home() {
   const { user, role, isAuthorized, loading, signOut } = useAuth();
@@ -84,10 +84,10 @@ export default function Home() {
     
     console.log("Firestore: Syncing clients...");
     const unsubscribe = onSnapshot(collection(db, "clients"), (snapshot) => {
-        const clientList = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data() as any
-        }));
+        const clientList = snapshot.docs.map(docSnap => ({
+            id: docSnap.id,
+            ...docSnap.data()
+        } as Client));
         setClients(clientList);
     });
     return () => unsubscribe();
@@ -100,7 +100,7 @@ export default function Home() {
     console.log("Firestore: Syncing extraSettings...");
     const unsubscribe = onSnapshot(doc(db, "settings", "extra"), (snapshot) => {
         if (snapshot.exists()) {
-            setExtraSettings(snapshot.data() as any);
+            setExtraSettings(snapshot.data() as Record<string, ExtraSetting>);
         }
     });
     return () => unsubscribe();
@@ -143,6 +143,7 @@ export default function Home() {
             </div>
           </div>
           {user.photoURL && (
+            /* eslint-disable-next-line @next/next/no-img-element */
             <img src={user.photoURL} alt={user.displayName || ""} className="w-8 h-8 rounded-full border border-zinc-700" />
           )}
           <button
@@ -246,10 +247,11 @@ export default function Home() {
             <section className="flex flex-col items-center w-full gap-8">
               <ActivityLogger />
 
-              <div className="hidden lg:block w-full max-w-md p-6 border border-dashed border-zinc-800 rounded-2xl text-zinc-600 text-center text-sm">
-                <p className="mb-2 font-bold text-zinc-400">DICA PRO</p>
-                Fechar um contrato garante o maior aumento de XP. Certifique-se de registrá-lo imediatamente para garantir o 1º lugar.
-              </div>
+              <div className="mt-8 bg-zinc-900/30 p-4 rounded-xl border border-zinc-800/30 text-[10px] text-zinc-500 leading-relaxed max-w-2xl">
+                    <p>
+                        <strong className="text-zinc-400">Nota:</strong> Itens marcados como &apos;Incentivo&apos; somam pontos fixos. Itens marcados como &apos;Light/Medium/Hard&apos; servem como atalhos no formulário de registro e seus pontos são multiplicados pelo Tier do associado.
+                    </p>
+                </div>
             </section>
 
             {/* Right Column: Rankings */}

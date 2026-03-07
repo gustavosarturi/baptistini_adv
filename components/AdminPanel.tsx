@@ -2,7 +2,7 @@
 
 import { useGameStore } from "@/lib/store";
 import { UserTier, AuthorizedUser } from "@/lib/types";
-import { ShieldCheck, Users, Medal, Mail, Plus, Trash2, Key, UserCheck } from "lucide-react";
+import { ShieldCheck, Medal, Plus, Trash2, Key, UserCheck } from "lucide-react";
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { collection, query, getDocs, setDoc, doc, deleteDoc, orderBy } from "firebase/firestore";
