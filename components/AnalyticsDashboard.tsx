@@ -1,23 +1,62 @@
 "use client";
 
 import { useGameStore } from "@/lib/store";
-import { BarChart3, Clock, TrendingUp, Users, Activity, Award, Filter, ArrowUpDown } from "lucide-react";
-import { useMemo, useState } from "react";
+import { BarChart3, Clock, TrendingUp, Users, Activity, Award, Filter, ArrowUpDown, Calendar, ChevronRight, Search, X, ChevronDown } from "lucide-react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { MonthSelector } from "./MonthSelector";
 
 export function AnalyticsDashboard() {
-    const { logs, users, selectedMonth } = useGameStore();
+    const { logs, users, selectedMonth, extraSettings } = useGameStore();
     const [clientSortBy, setClientSortBy] = useState<'count' | 'time'>('count');
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+    const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
-    // Filtrar logs pelo mês selecionado e opcionalmente por usuário selecionado
+    // Listar todas as atividades únicas presentes nos logs ou configurações
+    const activityOptions = useMemo(() => {
+        const fromLogs = logs.map(l => l.extra_type).filter((t): t is string => !!t);
+        const fromSettings = Object.keys(extraSettings);
+        return Array.from(new Set([...fromLogs, ...fromSettings])).sort();
+    }, [logs, extraSettings]);
+
+    const filteredOptions = useMemo(() => {
+        return activityOptions.filter(option =>
+            option.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [activityOptions, searchQuery]);
+
+    // Fechar dropdown ao clicar fora
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsDropdownOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    // Filtrar logs pelo mês selecionado, usuário e atividade
     const filteredLogs = useMemo(() => {
-        let list = logs.filter(log => log.date.startsWith(selectedMonth));
+        let list = logs;
+
+        // Só aplicamos filtro de mês se não "all"
+        if (selectedMonth !== "all") {
+            list = list.filter(log => log.date.startsWith(selectedMonth));
+        }
+
         if (selectedUserId) {
             list = list.filter(l => l.user_id === selectedUserId);
         }
+
+        if (selectedActivity) {
+            list = list.filter(l => l.extra_type === selectedActivity);
+        }
+
         return list;
-    }, [logs, selectedMonth, selectedUserId]);
+    }, [logs, selectedMonth, selectedUserId, selectedActivity]);
 
     // 1. Top Clientes
     const clientStats = useMemo(() => {
@@ -48,7 +87,56 @@ export function AnalyticsDashboard() {
         return stats;
     }, [filteredLogs]);
 
-    // 3. Estatísticas de Tempo
+    // 3. Estatísticas de Atividade (Por Tempo e Frequência)
+    const activityStats = useMemo(() => {
+        const stats: Record<string, { count: number; time: number }> = {};
+        filteredLogs.forEach(log => {
+            const key = log.extra_type || 'Geral';
+            if (!stats[key]) stats[key] = { count: 0, time: 0 };
+            stats[key].count += 1;
+            stats[key].time += log.time_spent;
+        });
+
+        const sortedByTime = Object.entries(stats)
+            .sort((a, b) => b[1].time - a[1].time)
+            .slice(0, 8);
+
+        const sortedByFrequency = Object.entries(stats)
+            .sort((a, b) => b[1].count - a[1].count)
+            .slice(0, 8);
+
+        return { sortedByTime, sortedByFrequency };
+    }, [filteredLogs]);
+
+    const maxActivityFrequency = useMemo(() => {
+        const frequencies = Object.values(activityStats.sortedByFrequency).map(s => s[1].count);
+        return Math.max(...frequencies, 1);
+    }, [activityStats]);
+
+    const maxActivityTime = useMemo(() => {
+        const times = Object.values(activityStats.sortedByTime).map(s => s[1].time);
+        return Math.max(...times, 1);
+    }, [activityStats]);
+
+    // 4. Evolução Mensal de Horas (Nova)
+    const monthlyHoursStats = useMemo(() => {
+        const stats: Record<string, number> = {};
+
+        // Filtramos apenas por usuário e atividade para o gráfico histórico
+        let historyLogs = logs;
+        if (selectedUserId) historyLogs = historyLogs.filter(l => l.user_id === selectedUserId);
+        if (selectedActivity) historyLogs = historyLogs.filter(l => l.extra_type === selectedActivity);
+
+        historyLogs.forEach(log => {
+            const month = log.date.slice(0, 7);
+            stats[month] = (stats[month] || 0) + log.time_spent;
+        });
+
+        return Object.entries(stats)
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .slice(-6); // Últimos 6 meses
+    }, [logs, selectedUserId, selectedActivity]);
+
     const totalMinutes = useMemo(() => {
         return filteredLogs.reduce((acc, log) => acc + log.time_spent, 0);
     }, [filteredLogs]);
@@ -59,18 +147,23 @@ export function AnalyticsDashboard() {
         return `${h}h ${m}m`;
     };
 
-    // 4. Ranking de Usuários
     const userRankings = useMemo(() => {
         const rankings = users.map(user => {
             const score = logs
-                .filter(l => l.date.startsWith(selectedMonth) && l.user_id === user.id)
+                .filter(l => {
+                    const monthMatch = selectedMonth === 'all' || l.date.startsWith(selectedMonth);
+                    const activityMatch = !selectedActivity || l.extra_type === selectedActivity;
+                    return monthMatch && l.user_id === user.id && activityMatch;
+                })
                 .reduce((acc, l) => acc + l.final_points, 0);
             return { user, score };
         });
         return rankings.sort((a, b) => b.score - a.score);
-    }, [logs, selectedMonth, users]);
+    }, [logs, selectedMonth, users, selectedActivity]);
 
     const maxClientValue = Math.max(...clientStats.map(c => clientSortBy === 'count' ? c.count : c.time), 1);
+    const maxActivityFreq = Math.max(...activityStats.sortedByFrequency.map(s => s[1].count), 1);
+    const maxMonthlyHours = Math.max(...monthlyHoursStats.map(s => s[1]), 1);
     const totalLogs = filteredLogs.length || 1;
 
     const selectedUser = users.find(u => u.id === selectedUserId);
@@ -87,18 +180,25 @@ export function AnalyticsDashboard() {
                         </div>
                         <div>
                             <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic">ANÁLISE DE <span className="text-primary">PERFORMANCE</span></h2>
-                            <div className="flex items-center gap-3 mt-1 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                            <div className="flex flex-wrap items-center gap-3 mt-1 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
                                 <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> DADOS ATUALIZADOS</span>
+
                                 {selectedUserId && (
-                                    <>
-                                        <span>•</span>
-                                        <button
-                                            onClick={() => setSelectedUserId(null)}
-                                            className="text-primary hover:underline cursor-pointer"
-                                        >
-                                            FILTRO: {selectedUser?.full_name} (X)
-                                        </button>
-                                    </>
+                                    <button
+                                        onClick={() => setSelectedUserId(null)}
+                                        className="text-primary hover:underline cursor-pointer flex items-center gap-1 bg-primary/10 px-2 py-0.5 rounded"
+                                    >
+                                        FILTRO: {selectedUser?.full_name} (X)
+                                    </button>
+                                )}
+
+                                {selectedActivity && (
+                                    <button
+                                        onClick={() => setSelectedActivity(null)}
+                                        className="text-blue-400 hover:underline cursor-pointer flex items-center gap-1 bg-blue-400/10 px-2 py-0.5 rounded"
+                                    >
+                                        ATIVIDADE: {selectedActivity} (X)
+                                    </button>
                                 )}
                             </div>
                         </div>
@@ -132,9 +232,146 @@ export function AnalyticsDashboard() {
                 </div>
             </div>
 
+            {/* Filtro por Atividade (Barra de Pesquisa) */}
+            <div className="relative w-full max-w-2xl mx-auto" ref={dropdownRef}>
+                <div className="relative group">
+                    <div className={`absolute inset-0 bg-primary/20 rounded-2xl blur-xl transition-all duration-500 scale-90 ${isDropdownOpen ? 'opacity-100 scale-100' : 'opacity-0'}`} />
+
+                    <div className={`
+                        relative flex items-center gap-4 bg-zinc-900/80 border p-4 rounded-2xl backdrop-blur-xl transition-all duration-300
+                        ${isDropdownOpen ? 'border-primary shadow-[0_0_30px_rgba(255,229,0,0.1)]' : 'border-zinc-800 hover:border-zinc-700'}
+                    `}>
+                        <Search size={20} className={selectedActivity ? 'text-primary' : 'text-zinc-500'} />
+
+                        <input
+                            type="text"
+                            placeholder="Pesquisar atividade..."
+                            className="flex-1 bg-transparent border-none outline-none text-white font-bold placeholder:text-zinc-600 placeholder:font-medium"
+                            value={selectedActivity || searchQuery}
+                            onChange={(e) => {
+                                if (selectedActivity) setSelectedActivity(null);
+                                setSearchQuery(e.target.value);
+                                setIsDropdownOpen(true);
+                            }}
+                            onFocus={() => setIsDropdownOpen(true)}
+                        />
+
+                        {(selectedActivity || searchQuery) && (
+                            <button
+                                onClick={() => {
+                                    setSelectedActivity(null);
+                                    setSearchQuery("");
+                                    setIsDropdownOpen(false);
+                                }}
+                                className="p-1 hover:bg-white/10 rounded-lg text-zinc-500 hover:text-white transition-colors"
+                            >
+                                <X size={16} />
+                            </button>
+                        )}
+
+                        <div className="w-[1px] h-6 bg-zinc-800 mx-1" />
+
+                        <button
+                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                            className={`p-1 hover:bg-white/10 rounded-lg text-zinc-500 hover:text-white transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`}
+                        >
+                            <ChevronDown size={20} />
+                        </button>
+                    </div>
+
+                    {/* Dropdown de Sugestões */}
+                    {isDropdownOpen && (
+                        <div className="absolute top-full left-0 right-0 mt-3 bg-zinc-900 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-4 duration-300">
+                            <div className="max-h-64 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-zinc-800">
+                                <button
+                                    onClick={() => {
+                                        setSelectedActivity(null);
+                                        setSearchQuery("");
+                                        setIsDropdownOpen(false);
+                                    }}
+                                    className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors group text-left"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center group-hover:bg-primary transition-colors">
+                                            <Filter size={14} className="group-hover:text-black transition-colors" />
+                                        </div>
+                                        <span className="text-sm font-bold text-zinc-400 group-hover:text-white">Todas as Atividades</span>
+                                    </div>
+                                    {!selectedActivity && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                                </button>
+
+                                {filteredOptions.length > 0 ? (
+                                    filteredOptions.map((option) => (
+                                        <button
+                                            key={option}
+                                            onClick={() => {
+                                                setSelectedActivity(option);
+                                                setSearchQuery("");
+                                                setIsDropdownOpen(false);
+                                            }}
+                                            className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors group text-left"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center group-hover:bg-blue-500 transition-colors">
+                                                    <Activity size={14} className="group-hover:text-white transition-colors" />
+                                                </div>
+                                                <span className="text-sm font-bold text-zinc-400 group-hover:text-white">{option}</span>
+                                            </div>
+                                            {selectedActivity === option && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
+                                        </button>
+                                    ))
+                                ) : (
+                                    <div className="px-4 py-8 text-center text-zinc-600 italic text-xs uppercase tracking-widest">
+                                        Nenhuma atividade encontrada
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                {/* 1. Top Clientes com Scroll e Ordenação */}
+                {/* Grafico Mensal de Horas (Novo) */}
+                <div className="lg:col-span-3 bg-zinc-900/40 border border-zinc-800 rounded-3xl p-8 shadow-xl">
+                    <div className="flex items-center justify-between mb-8">
+                        <div className="flex items-center gap-3">
+                            <Clock className="text-primary" size={20} />
+                            <h3 className="text-lg font-black text-white uppercase tracking-tight italic">Evolução de Horas <span className="text-primary">Mês a Mês</span></h3>
+                        </div>
+                        <div className="flex items-center gap-4 text-[10px] font-bold text-zinc-500">
+                            <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-primary" /> HISTÓRICO</div>
+                        </div>
+                    </div>
+
+                    <div className="h-[200px] flex items-end gap-2 sm:gap-4 px-2">
+                        {monthlyHoursStats.length > 0 ? monthlyHoursStats.map(([month, minutes], idx) => (
+                            <div key={month} className="flex-1 flex flex-col items-center gap-4 group">
+                                <div className="w-full relative flex flex-col items-center">
+                                    <div className="absolute -top-8 opacity-0 group-hover:opacity-100 transition-opacity bg-zinc-800 text-[10px] font-bold text-white px-2 py-1 rounded pointer-events-none z-10 whitespace-nowrap">
+                                        {formatTime(minutes)}
+                                    </div>
+                                    <div
+                                        className="w-full bg-gradient-to-t from-zinc-800 to-primary/80 rounded-t-lg group-hover:to-primary transition-all duration-700 ease-out relative"
+                                        style={{ height: `${(minutes / maxMonthlyHours) * 160 + 10}px` }}
+                                    >
+                                        <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </div>
+                                </div>
+                                <div className="text-[10px] font-black text-zinc-500 group-hover:text-white transition-colors uppercase">
+                                    {new Date(month + "-02").toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                                </div>
+                            </div>
+                        )) : (
+                            <div className="w-full h-full flex items-center justify-center text-zinc-600 italic uppercase text-xs">
+                                Sem dados históricos suficientes
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Top Clientes com Scroll e Ordenação */}
                 <div className="lg:col-span-2 bg-secondary border border-zinc-800 rounded-3xl p-8 shadow-xl flex flex-col">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
                         <div className="flex items-center gap-3">
@@ -186,11 +423,11 @@ export function AnalyticsDashboard() {
                     </div>
                 </div>
 
-                {/* 2. Perfil de Carga (Gráfico de Rosca com Cores Corretas) */}
+                {/* Perfil de Carga (Gráfico de Rosca) */}
                 <div className="bg-secondary border border-zinc-800 rounded-3xl p-8 shadow-xl">
                     <div className="flex items-center gap-3 mb-8">
                         <Activity className="text-primary" size={20} />
-                        <h3 className="text-lg font-black text-white uppercase tracking-tight">Perfil de Atividade</h3>
+                        <h3 className="text-lg font-black text-white uppercase tracking-tight">Perfil de Complexidade</h3>
                     </div>
 
                     <div className="flex flex-col items-center justify-center space-y-8 h-full pb-8">
@@ -251,7 +488,63 @@ export function AnalyticsDashboard() {
                     </div>
                 </div>
 
-                {/* 3. Ranking com Filtro por Usuário */}
+                {/* 5. Rank de Atividades (Pontos e Frequência) */}
+                <div className="lg:col-span-3 bg-zinc-950 border border-zinc-800 rounded-3xl p-8 shadow-2xl space-y-12">
+                    
+                    {/* Atividades por Tempo */}
+                    <section>
+                        <div className="flex items-center gap-3 mb-6">
+                            <Clock className="text-primary" size={20} />
+                            <h3 className="text-lg font-black text-white uppercase tracking-tight italic">Atividades com <span className="text-primary">Mais Tempo Gasto</span></h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {activityStats.sortedByTime.length > 0 ? activityStats.sortedByTime.map(([name, data]) => (
+                                <div key={name} className="bg-zinc-900/30 border border-zinc-800/50 rounded-2xl p-4 hover:border-primary/30 transition-colors group">
+                                    <div className="flex justify-between items-end mb-2">
+                                        <h4 className="text-xs font-bold text-zinc-300 truncate w-2/3 group-hover:text-white transition-colors">{name}</h4>
+                                        <span className="text-xs font-black text-primary uppercase">{formatTime(data.time)}</span>
+                                    </div>
+                                    <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
+                                        <div 
+                                            className="h-full bg-primary transition-all duration-1000 ease-out"
+                                            style={{ width: `${(data.time / maxActivityTime) * 100}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            )) : (
+                                <div className="col-span-2 py-8 text-center text-zinc-600 italic uppercase text-xs">Sem dados</div>
+                            )}
+                        </div>
+                    </section>
+
+                    {/* Atividades por Frequência */}
+                    <section>
+                        <div className="flex items-center gap-3 mb-6">
+                            <Activity className="text-blue-400" size={20} />
+                            <h3 className="text-lg font-black text-white uppercase tracking-tight italic">Atividades <span className="text-blue-400">Mais Frequentes</span></h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {activityStats.sortedByFrequency.length > 0 ? activityStats.sortedByFrequency.map(([name, data]) => (
+                                <div key={name} className="bg-zinc-900/30 border border-zinc-800/50 rounded-2xl p-4 hover:border-blue-400/30 transition-colors group">
+                                    <div className="flex justify-between items-end mb-2">
+                                        <h4 className="text-xs font-bold text-zinc-300 truncate w-2/3 group-hover:text-white transition-colors">{name}</h4>
+                                        <span className="text-xs font-black text-blue-400 uppercase">{data.count}x</span>
+                                    </div>
+                                    <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
+                                        <div 
+                                            className="h-full bg-blue-500 transition-all duration-1000 ease-out"
+                                            style={{ width: `${(data.count / maxActivityFreq) * 100}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            )) : (
+                                <div className="col-span-2 py-8 text-center text-zinc-600 italic uppercase text-xs">Sem dados</div>
+                            )}
+                        </div>
+                    </section>
+                </div>
+
+                {/* Ranking com Filtro por Usuário */}
                 <div className="lg:col-span-3 bg-zinc-950 border border-zinc-800 rounded-3xl p-8 shadow-2xl relative">
                     <div className="flex items-center justify-between mb-8 relative z-10">
                         <div className="flex items-center gap-3">

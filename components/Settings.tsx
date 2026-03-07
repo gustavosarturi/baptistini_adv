@@ -3,33 +3,29 @@
 import { useGameStore } from "@/lib/store";
 import { DifficultyLevel } from "@/lib/types";
 import { Save, Settings as SettingsIcon, Plus, Trash2, Lock } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export function Settings() {
-    const { extraSettings, setExtraSettings } = useGameStore();
-    const [password, setPassword] = useState("");
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [error, setError] = useState("");
+    const { extraSettings } = useGameStore();
 
     const [localExtraSettings, setLocalExtraSettings] = useState(extraSettings);
     const [newItem, setNewItem] = useState({ name: "", value: "", type: "Extra" as DifficultyLevel });
     const [isSaved, setIsSaved] = useState(false);
 
-    const handleLogin = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (password === "admin") {
-            setIsAuthenticated(true);
-            setError("");
-        } else {
-            setError("Senha incorreta");
-            setPassword("");
-        }
-    };
+    useEffect(() => {
+        setLocalExtraSettings(extraSettings);
+    }, [extraSettings]);
 
-    const handleSave = () => {
-        setExtraSettings(localExtraSettings);
-        setIsSaved(true);
-        setTimeout(() => setIsSaved(false), 2000);
+    const handleSave = async () => {
+        try {
+            await setDoc(doc(db, "settings", "extra"), localExtraSettings);
+            setIsSaved(true);
+            setTimeout(() => setIsSaved(false), 2000);
+        } catch (error) {
+            console.error("Error saving settings:", error);
+        }
     };
 
     const handleExtraChange = (key: string, value: string) => {
@@ -52,42 +48,6 @@ export function Settings() {
         const { [key]: _, ...rest } = localExtraSettings;
         setLocalExtraSettings(rest);
     };
-
-    if (!isAuthenticated) {
-        return (
-            <div className="w-full max-w-md bg-secondary border border-zinc-800 rounded-3xl p-8 shadow-2xl animate-in fade-in zoom-in duration-500">
-                <div className="flex flex-col items-center text-center space-y-6">
-                    <div className="p-4 bg-zinc-900 rounded-2xl border border-zinc-800">
-                        <Lock className="text-zinc-600" size={32} />
-                    </div>
-                    <div>
-                        <h2 className="text-2xl font-black text-white uppercase tracking-tighter italic">Configurações do <span className="text-primary">Sistema</span></h2>
-                        <p className="text-zinc-500 text-xs font-medium uppercase mt-1">Acesso Restrito</p>
-                    </div>
-
-                    <form onSubmit={handleLogin} className="w-full space-y-4">
-                        <div className="space-y-2">
-                            <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Senha de Acesso</label>
-                            <input
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="••••••••"
-                                className="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-white text-center focus:border-primary outline-none transition-all font-mono"
-                            />
-                        </div>
-                        {error && <p className="text-red-500 text-[10px] font-bold uppercase">{error}</p>}
-                        <button
-                            type="submit"
-                            className="w-full bg-primary hover:bg-yellow-400 text-black font-black py-4 rounded-xl transition-all shadow-lg active:scale-95"
-                        >
-                            ACESSAR CONFIGURAÇÕES
-                        </button>
-                    </form>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div className="w-full max-w-4xl bg-secondary border border-zinc-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-8">

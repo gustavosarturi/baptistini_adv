@@ -4,9 +4,11 @@ import { useGameStore } from "@/lib/store";
 import { DifficultyLevel, TIER_MULTIPLIERS } from "@/lib/types";
 import { Briefcase, CheckCircle2, Clock, FileText, Scale, Zap } from "lucide-react";
 import { useState } from "react";
+import { collection, addDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export function ActivityLogger() {
-    const { addLog, currentUser, extraSettings, clients } = useGameStore();
+    const { currentUser, extraSettings, clients } = useGameStore();
 
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split('T')[0],
@@ -25,31 +27,46 @@ export function ActivityLogger() {
         c.name.toLowerCase().includes(clientSearch.toLowerCase())
     );
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!currentUser || !formData.extra_type) return;
 
         const selectedItem = extraSettings[formData.extra_type];
+        
+        // Calculate points here to save in Firestore
+        const base_points = selectedItem.points;
+        const multiplier = selectedItem.type === 'Extra' ? 1 : TIER_MULTIPLIERS[currentUser.tier];
+        const final_points = base_points * multiplier;
 
-        addLog({
-            ...formData,
-            complexity: selectedItem.type,
-            time_spent: Number(formData.time_spent) || 0,
-        });
+        try {
+            await addDoc(collection(db, "activity_logs"), {
+                ...formData,
+                user_id: currentUser.id,
+                user_name: currentUser.full_name,
+                complexity: selectedItem.type,
+                time_spent: Number(formData.time_spent) || 0,
+                base_points,
+                multiplier,
+                final_points,
+                created_at: new Date().toISOString()
+            });
 
-        // Reset form
-        setFormData({
-            date: new Date().toISOString().split('T')[0],
-            client_name: "",
-            process_number: "",
-            description: "",
-            time_spent: "",
-            extra_type: ""
-        });
-        setClientSearch("");
+            // Reset form
+            setFormData({
+                date: new Date().toISOString().split('T')[0],
+                client_name: "",
+                process_number: "",
+                description: "",
+                time_spent: "",
+                extra_type: ""
+            });
+            setClientSearch("");
 
-        setIsSuccess(true);
-        setTimeout(() => setIsSuccess(false), 2000);
+            setIsSuccess(true);
+            setTimeout(() => setIsSuccess(false), 2000);
+        } catch (error) {
+            console.error("Error saving activity log:", error);
+        }
     };
 
     if (!currentUser) return null;

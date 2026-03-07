@@ -1,7 +1,6 @@
 "use client";
 
 import { useGameStore } from "@/lib/store";
-import { format } from "date-fns";
 import { Calendar, Clock, CreditCard } from "lucide-react";
 
 export function ActivityFeed() {
@@ -14,19 +13,25 @@ export function ActivityFeed() {
         <div className="w-full bg-secondary bg-opacity-50 border border-zinc-800 rounded-2xl p-6">
             <h3 className="text-zinc-400 font-bold uppercase tracking-wider text-sm mb-4 flex items-center gap-2">
                 <Clock size={16} />
-                Recent Activities
+                Atividades Recentes
             </h3>
 
             <div className="flex flex-col gap-0">
                 {sortedLogs.map((log) => {
                     const user = users.find(u => u.id === log.user_id);
+                    const date = new Date(log.date + "T12:00:00"); // Add time to avoid TZ issues
+
                     return (
                         <div key={log.id} className="group flex items-start gap-4 py-4 border-b border-zinc-800/50 last:border-0 hover:bg-zinc-900/50 transition-colors px-2 rounded-lg">
 
                             {/* Date Block */}
                             <div className="flex flex-col items-center min-w-[50px] text-zinc-500">
-                                <span className="text-xs font-bold uppercase">{format(new Date(log.date), "MMM")}</span>
-                                <span className="text-xl font-black text-zinc-300">{format(new Date(log.date), "dd")}</span>
+                                <span className="text-xs font-bold uppercase">
+                                    {date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '').slice(0, 3)}
+                                </span>
+                                <span className="text-xl font-black text-zinc-300">
+                                    {date.getDate().toString().padStart(2, '0')}
+                                </span>
                             </div>
 
                             {/* Content */}
@@ -67,7 +72,7 @@ export function ActivityFeed() {
 
             {logs.length === 0 && (
                 <div className="text-center py-8 text-zinc-600 text-sm italic">
-                    No activities logged yet.
+                    Nenhuma atividade registrada ainda.
                 </div>
             )}
         </div>

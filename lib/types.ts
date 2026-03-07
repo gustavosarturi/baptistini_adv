@@ -9,6 +9,14 @@ export type Profile = {
     tier: UserTier;
 };
 
+export type AuthorizedUser = {
+    email: string;
+    role: 'admin' | 'user';
+    name?: string;
+    avatar_url?: string; // New: Sync from Google
+    added_at: string;
+};
+
 export type Client = {
     id: string;
     name: string;

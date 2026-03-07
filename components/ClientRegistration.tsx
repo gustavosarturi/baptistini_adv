@@ -3,9 +3,11 @@
 import { useGameStore } from "@/lib/store";
 import { Users, Plus, Trash2, Search, Mail, Phone, UserPlus } from "lucide-react";
 import { useState } from "react";
+import { collection, addDoc, deleteDoc, doc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export function ClientRegistration() {
-    const { clients, addClient, removeClient } = useGameStore();
+    const { clients } = useGameStore();
     const [searchTerm, setSearchTerm] = useState("");
     const [isAdding, setIsAdding] = useState(false);
     const [newClient, setNewClient] = useState({ name: "", email: "", phone: "" });
@@ -15,12 +17,28 @@ export function ClientRegistration() {
         client.email?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const handleAddClient = (e: React.FormEvent) => {
+    const handleAddClient = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newClient.name) return;
-        addClient(newClient.name, newClient.email, newClient.phone);
-        setNewClient({ name: "", email: "", phone: "" });
-        setIsAdding(false);
+        
+        try {
+            await addDoc(collection(db, "clients"), {
+                ...newClient,
+                created_at: new Date().toISOString()
+            });
+            setNewClient({ name: "", email: "", phone: "" });
+            setIsAdding(false);
+        } catch (error) {
+            console.error("Error adding client:", error);
+        }
+    };
+
+    const handleRemoveClient = async (id: string) => {
+        try {
+            await deleteDoc(doc(db, "clients", id));
+        } catch (error) {
+            console.error("Error removing client:", error);
+        }
     };
 
     return (
@@ -118,7 +136,7 @@ export function ClientRegistration() {
                                         {client.name.charAt(0).toUpperCase()}
                                     </div>
                                     <button
-                                        onClick={() => removeClient(client.id)}
+                                        onClick={() => handleRemoveClient(client.id)}
                                         className="p-2 text-zinc-600 hover:text-red-500 transition-colors"
                                         title="Remover cliente"
                                     >

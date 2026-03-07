@@ -2,11 +2,7 @@ import { create } from 'zustand';
 import { ActivityLog, DifficultyLevel, DEFAULT_EXTRA_VALUES, Profile, TIER_MULTIPLIERS, ExtraSetting, Client, UserTier } from './types';
 import { MOCK_USERS, INITIAL_LOGS } from './mock-data';
 
-const INITIAL_CLIENTS: Client[] = [
-    { id: '1', name: 'Alvo Dumbledore', email: 'alvo@hogwarts.com', created_at: new Date().toISOString() },
-    { id: '2', name: 'Bruce Wayne', email: 'bruce@waynecorp.com', created_at: new Date().toISOString() },
-    { id: '3', name: 'Tony Stark', email: 'tony@starkindustries.com', created_at: new Date().toISOString() },
-];
+const INITIAL_CLIENTS: Client[] = [];
 
 interface GameState {
     users: Profile[];
@@ -35,7 +31,7 @@ interface GameState {
     removeClient: (clientId: string) => void;
     updateClient: (clientId: string, data: Partial<Omit<Client, 'id' | 'created_at'>>) => void;
 
-    addLog: (data: {
+    addLog: (id: string, data: {
         date: string;
         client_name: string;
         process_number?: string;
@@ -46,15 +42,18 @@ interface GameState {
     }) => void;
 
     removeLog: (logId: string) => void;
+    setUsers: (users: Profile[]) => void;
+    setLogs: (logs: ActivityLog[]) => void;
+    setClients: (clients: Client[]) => void;
 
     getLeaderboard: () => { user: Profile; score: number }[];
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
-    users: MOCK_USERS,
-    logs: INITIAL_LOGS,
-    currentUser: MOCK_USERS[0],
-    clients: INITIAL_CLIENTS,
+    users: [],
+    logs: [],
+    currentUser: null,
+    clients: [],
 
     extraSettings: DEFAULT_EXTRA_VALUES,
     setExtraSettings: (settings) => set({ extraSettings: settings }),
@@ -114,7 +113,11 @@ export const useGameStore = create<GameState>((set, get) => ({
         }));
     },
 
-    addLog: (data) => {
+    setUsers: (users) => set({ users }),
+    setLogs: (logs) => set({ logs }),
+    setClients: (clients) => set({ clients }),
+
+    addLog: (id: string, data: any) => {
         const { currentUser, extraSettings } = get();
         if (!currentUser) return;
 
@@ -125,18 +128,14 @@ export const useGameStore = create<GameState>((set, get) => ({
             const setting = extraSettings[data.extra_type];
             if (setting) {
                 base_points = setting.points;
-                // If it's explicitly 'Extra' (Incentivo), multiplier is 1. 
-                // Otherwise, use tier multiplier for Light/Medium/Hard items even if they are in extraSettings.
-                if (setting.type === 'Extra') {
-                    multiplier = 1;
-                }
+                if (setting.type === 'Extra') multiplier = 1;
             }
         }
 
         const final_points = base_points * multiplier;
 
         const newLog: ActivityLog = {
-            id: Math.random().toString(36).substr(2, 9),
+            id,
             user_id: currentUser.id,
             created_at: new Date().toISOString(),
             base_points,

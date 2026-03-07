@@ -1,14 +1,22 @@
 "use client";
 
 import { useGameStore } from "@/lib/store";
+import { useAuth } from "@/lib/auth-context";
 import { MonthSelector } from "./MonthSelector";
-import { Calendar, Clock, User as UserIcon, Briefcase, FileText, Activity, Trash2 } from "lucide-react";
+import { Calendar, Clock, User as UserIcon, Briefcase, FileText, Activity, Trash2, Filter, Search, X } from "lucide-react";
+import { useState } from "react";
 
 export function History() {
     const { logs, users, selectedMonth, removeLog } = useGameStore();
+    const { role } = useAuth();
+    const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
-    // Filter logs for the selected month
-    const filteredLogs = logs.filter(log => log.date.startsWith(selectedMonth));
+    // Filter logs for the selected month and user
+    const filteredLogs = logs.filter(log => {
+        const monthMatch = selectedMonth === 'all' || log.date.startsWith(selectedMonth);
+        const userMatch = !selectedUserId || log.user_id === selectedUserId;
+        return monthMatch && userMatch;
+    });
 
     // Sort logs by date (newest first)
     const sortedLogs = [...filteredLogs].sort((a, b) =>
@@ -27,16 +35,47 @@ export function History() {
         <div className="w-full max-w-4xl animate-in fade-in slide-in-from-bottom-4 duration-700">
 
             {/* Header & Filter */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
-                <div className="flex items-center gap-3">
-                    <div className="p-3 bg-zinc-800 rounded-xl">
-                        <Activity className="text-zinc-400" size={24} />
+            <div className="flex flex-col gap-6 mb-8">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-3 bg-zinc-800 rounded-xl">
+                            <Activity className="text-zinc-400" size={24} />
+                        </div>
+                        <h2 className="text-2xl font-bold text-white uppercase tracking-tight">
+                            Histórico de Atividades
+                        </h2>
                     </div>
-                    <h2 className="text-2xl font-bold text-white uppercase tracking-tight">
-                        Histórico de Atividades
-                    </h2>
+                    <div className="flex items-center gap-3">
+                        <MonthSelector />
+                    </div>
                 </div>
-                <MonthSelector />
+
+                {role === 'admin' && (
+                    <div className="flex flex-wrap items-center gap-3 p-4 bg-zinc-900/50 border border-zinc-800 rounded-2xl animate-in fade-in slide-in-from-top-2">
+                        <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-bold uppercase tracking-wider mr-2">
+                            <Filter size={14} />
+                            Filtrar por Associado:
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                onClick={() => setSelectedUserId(null)}
+                                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${!selectedUserId ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' : 'bg-black/40 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-700'}`}
+                            >
+                                TODOS
+                            </button>
+                            {users.map((u) => (
+                                <button
+                                    key={u.id}
+                                    onClick={() => setSelectedUserId(u.id)}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${selectedUserId === u.id ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' : 'bg-black/40 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-700'}`}
+                                >
+                                    <img src={u.avatar_url} className="w-4 h-4 rounded-full object-cover" alt="" />
+                                    {u.full_name.split(' ')[0]}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* List */}
