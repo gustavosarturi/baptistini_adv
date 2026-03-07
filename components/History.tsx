@@ -69,6 +69,7 @@ export function History() {
                                     onClick={() => setSelectedUserId(u.id)}
                                     className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${selectedUserId === u.id ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' : 'bg-black/40 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-700'}`}
                                 >
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img src={u.avatar_url} className="w-4 h-4 rounded-full object-cover" alt="" />
                                     {u.full_name.split(' ')[0]}
                                 </button>

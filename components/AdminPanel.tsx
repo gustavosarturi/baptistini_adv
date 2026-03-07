@@ -115,6 +115,7 @@ export function AdminPanel() {
                         {users.map((user) => (
                             <div key={user.id} className="bg-secondary border border-zinc-800 p-6 rounded-2xl flex items-center justify-between group hover:border-zinc-700 transition-all">
                                 <div className="flex items-center gap-4">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img src={user.avatar_url} className="w-12 h-12 rounded-full border-2 border-zinc-800 group-hover:border-primary/50 transition-all" alt="" />
                                     <div>
                                         <h3 className="text-sm font-black text-white uppercase tracking-wide">{user.full_name}</h3>
