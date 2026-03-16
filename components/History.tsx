@@ -98,10 +98,10 @@ export function History() {
                                 {/* Date Badge */}
                                 <div className="flex flex-col items-center bg-black/40 border border-zinc-800 rounded-xl p-3 min-w-[70px]">
                                     <span className="text-xs font-bold text-zinc-500 uppercase">
-                                        {new Date(log.date).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                                        {new Date(log.date + "T12:00:00").toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
                                     </span>
                                     <span className="text-2xl font-black text-white">
-                                        {new Date(log.date).getDate()}
+                                        {log.date.split('-')[2]}
                                     </span>
                                 </div>
 

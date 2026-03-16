@@ -10,8 +10,13 @@ import { db } from "@/lib/firebase";
 export function ActivityLogger() {
     const { currentUser, extraSettings, clients } = useGameStore();
 
+    const getLocalDateString = () => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
     const [formData, setFormData] = useState({
-        date: new Date().toISOString().split('T')[0],
+        date: getLocalDateString(),
         client_name: "",
         process_number: "",
         description: "",
@@ -53,7 +58,7 @@ export function ActivityLogger() {
 
             // Reset form
             setFormData({
-                date: new Date().toISOString().split('T')[0],
+                date: getLocalDateString(),
                 client_name: "",
                 process_number: "",
                 description: "",

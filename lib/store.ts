@@ -54,7 +54,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         return { extraSettings: rest };
     }),
 
-    selectedMonth: new Date().toISOString().slice(0, 7), // Current YYYY-MM
+    selectedMonth: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`, // Current YYYY-MM
     setSelectedMonth: (month: string) => set({ selectedMonth: month }),
 
     setCurrentUser: (userId: string) => {

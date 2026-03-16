@@ -2,7 +2,7 @@
 
 import { useGameStore } from "@/lib/store";
 import { UserTier, AuthorizedUser } from "@/lib/types";
-import { ShieldCheck, Medal, Plus, Trash2, Key, UserCheck } from "lucide-react";
+import { ShieldCheck, Medal, Plus, Trash2, Key, UserCheck, Edit2, Check, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { collection, query, getDocs, setDoc, doc, deleteDoc, orderBy } from "firebase/firestore";
@@ -17,6 +17,12 @@ export function AdminPanel() {
     const [newName, setNewName] = useState("");
     const [newRole, setNewRole] = useState<'admin' | 'user'>('user');
     const [isLoadingAuth, setIsLoadingAuth] = useState(false);
+
+    // Edit State
+    const [editingEmail, setEditingEmail] = useState<string | null>(null);
+    const [editName, setEditName] = useState("");
+    const [editNewEmail, setEditNewEmail] = useState("");
+    const [editRole, setEditRole] = useState<'admin' | 'user'>('user');
 
     // Fetch authorized users on mount or when auth tab is active
     useEffect(() => {
@@ -75,6 +81,34 @@ export function AdminPanel() {
             fetchAuthorizedUsers();
         } catch (error) {
             console.error("Error deleting authorized user:", error);
+        }
+    };
+
+    const handleSaveEdit = async (oldEmail: string) => {
+        if (!db) return;
+        const finalEmail = editNewEmail.toLowerCase().trim();
+        if (!finalEmail) return;
+
+        const oldAuth = authorizedUsers.find(a => a.email === oldEmail);
+        
+        const newData: AuthorizedUser = {
+            email: finalEmail,
+            name: editName.trim() || undefined,
+            role: editRole,
+            added_at: oldAuth?.added_at || new Date().toISOString(),
+        };
+
+        try {
+            if (finalEmail !== oldEmail) {
+                // If email changed, delete old doc since doc id is the email
+                await deleteDoc(doc(db, "authorized_users", oldEmail));
+            }
+            await setDoc(doc(db, "authorized_users", finalEmail), newData);
+            
+            setEditingEmail(null);
+            fetchAuthorizedUsers();
+        } catch (error) {
+            console.error("Error updating authorized user:", error);
         }
     };
 
@@ -250,22 +284,87 @@ export function AdminPanel() {
                                     ) : (
                                         authorizedUsers.map((auth) => (
                                             <tr key={auth.email} className="hover:bg-zinc-900/40 transition-colors group text-xs">
-                                                <td className="px-6 py-4 text-white font-bold">{auth.name || "---"}</td>
-                                                <td className="px-6 py-4 text-zinc-400 font-mono">{auth.email}</td>
-                                                <td className="px-6 py-4">
-                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${auth.role === 'admin' ? 'bg-primary/20 text-primary border border-primary/20' : 'bg-zinc-800 text-zinc-400'}`}>
-                                                        {auth.role === 'admin' ? 'Admin' : 'Usuário'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <button
-                                                        onClick={() => handleDeleteAuthorizedUser(auth.email)}
-                                                        className="text-zinc-700 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-500/10"
-                                                        title="Revogar Acesso"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </td>
+                                                {editingEmail === auth.email ? (
+                                                    <>
+                                                        <td className="px-6 py-4">
+                                                            <input
+                                                                type="text"
+                                                                value={editName}
+                                                                onChange={(e) => setEditName(e.target.value)}
+                                                                className="w-full bg-black border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white focus:border-primary outline-none"
+                                                                placeholder="Nome"
+                                                            />
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <input
+                                                                type="email"
+                                                                value={editNewEmail}
+                                                                onChange={(e) => setEditNewEmail(e.target.value)}
+                                                                className="w-full bg-black border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white focus:border-primary outline-none"
+                                                                placeholder="E-mail"
+                                                            />
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <select
+                                                                value={editRole}
+                                                                onChange={(e) => setEditRole(e.target.value as 'admin' | 'user')}
+                                                                className="w-full bg-black border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white focus:border-primary outline-none appearance-none"
+                                                            >
+                                                                <option value="user">Usuário</option>
+                                                                <option value="admin">Admin</option>
+                                                            </select>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right flex items-center justify-end gap-1 h-full">
+                                                            <button
+                                                                onClick={() => handleSaveEdit(auth.email)}
+                                                                className="text-primary hover:text-green-400 transition-colors p-2 rounded-lg hover:bg-green-500/10"
+                                                                title="Salvar"
+                                                            >
+                                                                <Check size={16} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setEditingEmail(null)}
+                                                                className="text-zinc-500 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-500/10"
+                                                                title="Cancelar"
+                                                            >
+                                                                <X size={16} />
+                                                            </button>
+                                                        </td>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <td className="px-6 py-4 text-white font-bold">{auth.name || "---"}</td>
+                                                        <td className="px-6 py-4 text-zinc-400 font-mono">{auth.email}</td>
+                                                        <td className="px-6 py-4">
+                                                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${auth.role === 'admin' ? 'bg-primary/20 text-primary border border-primary/20' : 'bg-zinc-800 text-zinc-400'}`}>
+                                                                {auth.role === 'admin' ? 'Admin' : 'Usuário'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right">
+                                                            <div className="flex items-center justify-end gap-1">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setEditingEmail(auth.email);
+                                                                        setEditName(auth.name || "");
+                                                                        setEditNewEmail(auth.email);
+                                                                        setEditRole(auth.role);
+                                                                    }}
+                                                                    className="text-zinc-600 hover:text-primary transition-colors p-2 rounded-lg hover:bg-primary/10"
+                                                                    title="Editar"
+                                                                >
+                                                                    <Edit2 size={16} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteAuthorizedUser(auth.email)}
+                                                                    className="text-zinc-700 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-500/10"
+                                                                    title="Revogar Acesso"
+                                                                >
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </>
+                                                )}
                                             </tr>
                                         ))
                                     )}

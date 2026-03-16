@@ -7,23 +7,30 @@ export function MonthSelector() {
     const { selectedMonth, setSelectedMonth } = useGameStore();
 
     const handlePrevMonth = () => {
-        const date = new Date(selectedMonth + "-01");
+        const [year, month] = selectedMonth.split('-').map(Number);
+        const date = new Date(year, month - 1, 1);
         date.setMonth(date.getMonth() - 1);
-        setSelectedMonth(date.toISOString().slice(0, 7));
+        setSelectedMonth(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
     };
 
     const handleNextMonth = () => {
-        const date = new Date(selectedMonth + "-01");
+        const [year, month] = selectedMonth.split('-').map(Number);
+        const date = new Date(year, month - 1, 1);
         date.setMonth(date.getMonth() + 1);
-        setSelectedMonth(date.toISOString().slice(0, 7));
+        setSelectedMonth(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
     };
 
     const isAllTime = selectedMonth === 'all';
 
-    const formattedDate = isAllTime ? "Todo o Período" : new Date(selectedMonth + "-01").toLocaleDateString('pt-BR', {
-        month: 'long',
-        year: 'numeric'
-    });
+    let formattedDate = "Todo o Período";
+    if (!isAllTime) {
+        const [year, month] = selectedMonth.split('-').map(Number);
+        const date = new Date(year, month - 1, 1);
+        formattedDate = date.toLocaleDateString('pt-BR', {
+            month: 'long',
+            year: 'numeric'
+        });
+    }
 
     return (
         <div className="flex items-center gap-2">
@@ -53,7 +60,7 @@ export function MonthSelector() {
             </div>
 
             <button
-                onClick={() => setSelectedMonth(isAllTime ? new Date().toISOString().slice(0, 7) : 'all')}
+                onClick={() => setSelectedMonth(isAllTime ? `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}` : 'all')}
                 className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border
                     ${isAllTime ? 'bg-primary text-black border-primary shadow-[0_0_15px_rgba(255,229,0,0.3)]' : 'bg-zinc-900/50 text-zinc-500 border-zinc-800 hover:text-white hover:border-zinc-600'}
                 `}
