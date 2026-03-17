@@ -3,8 +3,18 @@
 import { useGameStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth-context";
 import { MonthSelector } from "./MonthSelector";
-import { Clock, Briefcase, Activity, Trash2, Filter } from "lucide-react";
 import { useState } from "react";
+import { doc, deleteDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { Clock, Briefcase, Activity, Trash2, Filter } from "lucide-react";
+
+function formatDuration(minutes: number) {
+    if (!minutes || minutes <= 0) return "0 min";
+    if (minutes < 60) return `${minutes} min`;
+    const h = Math.floor(minutes / 60);
+    const m = Math.floor(minutes % 60);
+    return m > 0 ? `${h}h ${m}min` : `${h}h`;
+}
 
 export function History() {
     const { logs, users, selectedMonth, removeLog } = useGameStore();
@@ -25,9 +35,16 @@ export function History() {
 
     const getUser = (userId: string) => users.find(u => u.id === userId);
 
-    const handleDelete = (logId: string) => {
+    const handleDelete = async (logId: string) => {
         if (window.confirm("Tem certeza que deseja excluir este registro?")) {
-            removeLog(logId);
+            if (!db) return;
+            try {
+                removeLog(logId); // Optimistic remote
+                await deleteDoc(doc(db, "activity_logs", logId));
+            } catch (error) {
+                console.error("Erro ao excluir log:", error);
+                alert("Erro ao excluir. Tente novamente.");
+            }
         }
     };
 
@@ -98,11 +115,16 @@ export function History() {
                                 {/* Date Badge */}
                                 <div className="flex flex-col items-center bg-black/40 border border-zinc-800 rounded-xl p-3 min-w-[70px]">
                                     <span className="text-xs font-bold text-zinc-500 uppercase">
-                                        {new Date(log.date + "T12:00:00").toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                                        {new Date(log.created_at || log.date + "T12:00:00").toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
                                     </span>
                                     <span className="text-2xl font-black text-white">
-                                        {log.date.split('-')[2]}
+                                        {new Date(log.created_at || log.date + "T12:00:00").getDate().toString().padStart(2, '0')}
                                     </span>
+                                    {log.created_at && (
+                                        <span className="text-[10px] text-zinc-500 font-mono mt-1">
+                                            {new Date(log.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                    )}
                                 </div>
 
                                 {/* User & Content */}
@@ -143,7 +165,7 @@ export function History() {
                                         )}
                                         <div className="flex items-center gap-1.5">
                                             <Clock size={12} />
-                                            <span>{log.time_spent} min</span>
+                                            <span>{formatDuration(log.time_spent)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -151,13 +173,15 @@ export function History() {
                                 {/* Score & Delete Badge */}
                                 <div className="flex flex-row sm:flex-col items-center gap-4 sm:gap-2 min-w-[100px] justify-end sm:text-right w-full sm:w-auto border-t sm:border-t-0 sm:border-l border-zinc-800 pt-3 sm:pt-0 sm:pl-5 mt-2 sm:mt-0 relative">
 
-                                    <button
-                                        onClick={() => handleDelete(log.id)}
-                                        className="sm:absolute sm:-top-2 sm:-right-2 p-2 rounded-full text-zinc-600 hover:text-red-500 hover:bg-red-500/10 transition-colors opacity-100 sm:opacity-0 group-hover:opacity-100"
-                                        title="Excluir Registro"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
+                                    {role === 'admin' && (
+                                        <button
+                                            onClick={() => handleDelete(log.id)}
+                                            className="sm:absolute sm:-top-2 sm:-right-2 p-2 rounded-full text-zinc-600 hover:text-red-500 hover:bg-red-500/10 transition-colors opacity-100 sm:opacity-0 group-hover:opacity-100"
+                                            title="Excluir Registro"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
 
                                     <div className="flex flex-col items-end">
                                         <span className={`text-xs font-bold uppercase py-0.5 px-2 rounded-full mb-1

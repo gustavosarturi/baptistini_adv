@@ -49,6 +49,13 @@ export function ActivityLogger() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!currentUser || !formData.extra_type || !db) return;
+        
+        // Block if not 'Extra' and no valid client name is selected
+        const selectedItemRaw = extraSettings[formData.extra_type];
+        if (selectedItemRaw?.type !== 'Extra' && !formData.client_name) {
+            alert("Por favor, selecione ou cadastre um cliente válido.");
+            return;
+        }
 
         const selectedItem = extraSettings[formData.extra_type];
         
@@ -60,6 +67,7 @@ export function ActivityLogger() {
         try {
             await addDoc(collection(db, "activity_logs"), {
                 ...formData,
+                date: getLocalDateString(),
                 user_id: currentUser.id,
                 user_name: currentUser.full_name,
                 complexity: selectedItem.type,
@@ -122,18 +130,6 @@ export function ActivityLogger() {
             </h2>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                {/* Date Input */}
-                <div>
-                    <label className="block text-xs font-bold text-zinc-500 uppercase mb-1">Data</label>
-                    <input
-                        required
-                        type="date"
-                        value={formData.date}
-                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                        className="w-full bg-black/50 border border-zinc-700 rounded-lg px-3 py-2.5 text-white text-sm focus:border-primary outline-none"
-                    />
-                </div>
-
                 {/* Activity Selector */}
                 <div>
                     <label className="block text-xs font-bold text-primary uppercase mb-1 flex items-center gap-1">
@@ -206,7 +202,7 @@ export function ActivityLogger() {
                                         ))
                                     ) : (
                                         <div className="px-4 py-3 text-xs flex flex-col gap-2">
-                                            <span className="text-zinc-500 italic">Cliente não encontrado.</span>
+                                            <span className="text-zinc-500 italic">Esse cliente não existe, registrar um novo?</span>
                                             {clientSearch && (
                                                 <button
                                                     type="button"
