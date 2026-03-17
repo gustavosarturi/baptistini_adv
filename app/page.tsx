@@ -25,7 +25,7 @@ export default function Home() {
 
   // If a non-admin tries to access an admin tab, redirect to ranking
   useEffect(() => {
-    if (role === 'user' && (activeTab === 'admin' || activeTab === 'settings' || activeTab === 'clients')) {
+    if (role === 'user' && (activeTab === 'admin' || activeTab === 'settings')) {
       setActiveTab('ranking');
     }
   }, [role, activeTab]);
@@ -191,17 +191,15 @@ export default function Home() {
             Dashboard
           </button>
           
-          {isAdmin && (
-            <button
-              onClick={() => setActiveTab('clients')}
-              className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-bold transition-all
-                ${activeTab === 'clients' ? 'bg-primary text-black shadow-lg' : 'text-zinc-400 hover:text-white'}
-              `}
-            >
-              <Users size={16} />
-              Clientes
-            </button>
-          )}
+          <button
+            onClick={() => setActiveTab('clients')}
+            className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-bold transition-all
+              ${activeTab === 'clients' ? 'bg-primary text-black shadow-lg' : 'text-zinc-400 hover:text-white'}
+            `}
+          >
+            <Users size={16} />
+            Clientes
+          </button>
 
           <button
             onClick={() => setActiveTab('history')}
@@ -266,7 +264,7 @@ export default function Home() {
           <AnalyticsDashboard />
         )}
 
-        {isAdmin && activeTab === 'clients' && (
+        {activeTab === 'clients' && (
           <ClientRegistration />
         )}
 

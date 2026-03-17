@@ -1,16 +1,23 @@
 "use client";
 
 import { useGameStore } from "@/lib/store";
-import { Users, Plus, Trash2, Search, Mail, Phone, UserPlus } from "lucide-react";
+import { Users, Plus, Trash2, Search, Mail, Phone, UserPlus, Edit2 } from "lucide-react";
 import { useState } from "react";
-import { collection, addDoc, deleteDoc, doc } from "firebase/firestore";
+import { collection, addDoc, deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 export function ClientRegistration() {
     const { clients } = useGameStore();
     const [searchTerm, setSearchTerm] = useState("");
     const [isAdding, setIsAdding] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
     const [newClient, setNewClient] = useState({ name: "", email: "", phone: "" });
+
+    const handleEditClick = (client: any) => {
+        setNewClient({ name: client.name, email: client.email || "", phone: client.phone || "" });
+        setEditingId(client.id);
+        setIsAdding(true);
+    };
 
     const filteredClients = clients.filter(client =>
         client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -22,10 +29,18 @@ export function ClientRegistration() {
         if (!newClient.name || !db) return;
         
         try {
-            await addDoc(collection(db, "clients"), {
-                ...newClient,
-                created_at: new Date().toISOString()
-            });
+            if (editingId) {
+                await updateDoc(doc(db, "clients", editingId), {
+                    ...newClient,
+                    updated_at: new Date().toISOString()
+                });
+                setEditingId(null);
+            } else {
+                await addDoc(collection(db, "clients"), {
+                    ...newClient,
+                    created_at: new Date().toISOString()
+                });
+            }
             setNewClient({ name: "", email: "", phone: "" });
             setIsAdding(false);
         } catch (error) {
@@ -60,7 +75,15 @@ export function ClientRegistration() {
                 </div>
 
                 <button
-                    onClick={() => setIsAdding(!isAdding)}
+                    onClick={() => {
+                        if (isAdding) {
+                            setIsAdding(false);
+                            setEditingId(null);
+                            setNewClient({ name: "", email: "", phone: "" });
+                        } else {
+                            setIsAdding(true);
+                        }
+                    }}
                     className="flex items-center gap-2 bg-primary hover:bg-yellow-400 text-black px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg hover:shadow-primary/20 active:scale-95"
                 >
                     {isAdding ? <><Plus className="rotate-45" size={18} /> Cancelar</> : <><UserPlus size={18} /> Novo Cliente</>}
@@ -136,13 +159,22 @@ export function ClientRegistration() {
                                     <div className="h-10 w-10 rounded-full bg-primary/20 border border-primary/20 flex items-center justify-center text-primary font-bold">
                                         {client.name.charAt(0).toUpperCase()}
                                     </div>
-                                    <button
-                                        onClick={() => handleRemoveClient(client.id)}
-                                        className="p-2 text-zinc-600 hover:text-red-500 transition-colors"
-                                        title="Remover cliente"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
+                                    <div className="flex gap-1">
+                                        <button
+                                            onClick={() => handleEditClick(client)}
+                                            className="p-2 text-zinc-600 hover:text-blue-500 transition-colors"
+                                            title="Editar cliente"
+                                        >
+                                            <Edit2 size={16} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleRemoveClient(client.id)}
+                                            className="p-2 text-zinc-600 hover:text-red-500 transition-colors"
+                                            title="Remover cliente"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div>

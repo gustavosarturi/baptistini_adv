@@ -2,7 +2,7 @@
 
 import { useGameStore } from "@/lib/store";
 import { DifficultyLevel, TIER_MULTIPLIERS } from "@/lib/types";
-import { Briefcase, CheckCircle2, Clock, FileText, Scale, Zap } from "lucide-react";
+import { Briefcase, CheckCircle2, Clock, FileText, Scale, Zap, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { collection, addDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -31,6 +31,20 @@ export function ActivityLogger() {
     const filteredClients = clients.filter(c =>
         c.name.toLowerCase().includes(clientSearch.toLowerCase())
     );
+
+    const handleQuickRegisterClient = async () => {
+        if (!clientSearch || !db) return;
+        try {
+            await addDoc(collection(db, "clients"), {
+                name: clientSearch,
+                created_at: new Date().toISOString()
+            });
+            setFormData({ ...formData, client_name: clientSearch });
+            setIsClientDropdownOpen(false);
+        } catch (error) {
+            console.error("Error creating quick client:", error);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -191,8 +205,18 @@ export function ActivityLogger() {
                                             </button>
                                         ))
                                     ) : (
-                                        <div className="px-4 py-3 text-xs text-zinc-600 italic">
-                                            Nenhum cliente encontrado
+                                        <div className="px-4 py-3 text-xs flex flex-col gap-2">
+                                            <span className="text-zinc-500 italic">Cliente não encontrado.</span>
+                                            {clientSearch && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleQuickRegisterClient}
+                                                    className="w-full text-left px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-lg transition-colors font-semibold flex items-center gap-2"
+                                                >
+                                                    <UserPlus size={14} />
+                                                    Cadastrar &quot;{clientSearch}&quot;
+                                                </button>
+                                            )}
                                         </div>
                                     )}
                                 </div>
