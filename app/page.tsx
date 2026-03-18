@@ -207,23 +207,8 @@ export default function Home() {
       <header className="flex flex-col items-center gap-4 mb-8 text-center text-white">
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center rounded-full shadow-[0_0_20px_rgba(255,242,59,0.3)]">
-            {/* Inline SVG Logo */}
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className="w-16 h-16 sm:w-20 sm:h-20">
-              <circle cx="50" cy="50" r="50" fill="#FFF23B" />
-              <g fill="#000">
-                <rect x="23" y="32" width="11" height="10" />
-                <rect x="38" y="21" width="10" height="59" />
-                <path fillRule="evenodd" d="
-                  M 48 32 L 59 32 A 13.5 13.5 0 0 1 59 59 L 48 59 Z
-                  M 48 42 L 59 42 A 3.5 3.5 0 0 1 59 49 L 48 49 Z
-                "/>
-                <path fillRule="evenodd" d="
-                  M 48 49 L 62 49 A 15.5 15.5 0 0 1 62 80 L 48 80 Z
-                  M 48 59 L 62 59 A 5.5 5.5 0 0 1 62 70 L 48 70 Z
-                "/>
-                <text x="76" y="80" fontFamily="system-ui, sans-serif" fontSize="8" fill="#000" fontWeight="bold">®</text>
-              </g>
-            </svg>
+            {/* Logo */}
+            <img src="/bap.svg" alt="Baptistini Logo" className="w-16 h-16 sm:w-20 sm:h-20" />
           </div>
           <h1 className="text-4xl sm:text-6xl font-black tracking-tighter uppercase italic">
             BAPTISTINI <span className="text-primary">INCENTIVOS</span>
