@@ -159,7 +159,7 @@ export default function Home() {
       {/* Header */}
       <header className="flex flex-col items-center gap-4 mb-8 text-center text-white">
         <div className="flex items-center gap-3">
-          <div className="p-1 sm:p-2 bg-primary flex items-center justify-center rounded-xl shadow-[0_0_20px_rgba(255,242,59,0.3)] border border-primary/50">
+          <div className="flex items-center justify-center rounded-full shadow-[0_0_20px_rgba(255,242,59,0.3)]">
             {/* Inline SVG Logo */}
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className="w-10 h-10 sm:w-12 sm:h-12">
               <circle cx="50" cy="50" r="50" fill="#FFF23B" />
