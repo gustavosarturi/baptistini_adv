@@ -161,7 +161,7 @@ export default function Home() {
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center rounded-full shadow-[0_0_20px_rgba(255,242,59,0.3)]">
             {/* Inline SVG Logo */}
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className="w-10 h-10 sm:w-12 sm:h-12">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className="w-16 h-16 sm:w-20 sm:h-20">
               <circle cx="50" cy="50" r="50" fill="#FFF23B" />
               <g fill="#000">
                 <rect x="23" y="32" width="11" height="10" />
