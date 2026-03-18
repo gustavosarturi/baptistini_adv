@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     let cachedRole: string | null = null;
                     try {
                         cachedRole = localStorage.getItem(`role_${email}`);
-                    } catch (e) {
+                    } catch {
                         console.warn("Auth: LocalStorage access denied");
                     }
 
@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     const userDocRef = doc(db, "authorized_users", email);
                     
                     // Fetch with a timeout so it never hangs infinitely
-                    const fetchWithTimeout = new Promise<any>((resolve, reject) => {
+                    const fetchWithTimeout = new Promise<import('firebase/firestore').DocumentSnapshot>((resolve, reject) => {
                         const timer = setTimeout(() => reject(new Error("Timeout ao conectar com Firebase")), 8000);
                         getDoc(userDocRef).then((res) => {
                             clearTimeout(timer);
@@ -111,13 +111,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         console.warn("Auth: User NOT in authorized_users collection");
                         setRole(null);
                         setIsAuthorized(false);
-                        try { localStorage.removeItem(`role_${email}`); } catch (e) {}
+                        try { localStorage.removeItem(`role_${email}`); } catch {}
                     }
                 } catch (error) {
                     console.error("Auth: Firestore error or Timeout:", error);
                     // On timeout or offline, if we have cache, we keep it. If not, we block.
                     let hasCache = false;
-                    try { hasCache = !!localStorage.getItem(`role_${email}`); } catch (e) {}
+                    try { hasCache = !!localStorage.getItem(`role_${email}`); } catch {}
                     
                     if (!hasCache) {
                         setRole(null);

@@ -2,6 +2,7 @@
 
 import { useGameStore } from "@/lib/store";
 import { Users, Plus, Trash2, Search, Mail, Phone, UserPlus, Edit2 } from "lucide-react";
+import { Client } from "@/lib/types";
 import { useState } from "react";
 import { collection, addDoc, deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -13,7 +14,7 @@ export function ClientRegistration() {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [newClient, setNewClient] = useState({ name: "", email: "", phone: "" });
 
-    const handleEditClick = (client: any) => {
+    const handleEditClick = (client: Client) => {
         setNewClient({ name: client.name, email: client.email || "", phone: client.phone || "" });
         setEditingId(client.id);
         setIsAdding(true);

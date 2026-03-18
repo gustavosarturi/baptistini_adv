@@ -137,7 +137,7 @@ export function AnalyticsDashboard() {
         return Object.entries(stats)
             .sort((a, b) => a[0].localeCompare(b[0]))
             .slice(-6); // Últimos 6 meses
-    }, [logs, selectedUserId, selectedActivity]);
+    }, [logs, selectedUserId, selectedActivity, selectedDepartment]);
 
     const totalMinutes = useMemo(() => {
         return filteredLogs.reduce((acc, log) => acc + log.time_spent, 0);

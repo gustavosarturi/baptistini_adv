@@ -179,7 +179,7 @@ export function ActivityLogger() {
                     <select
                         required
                         value={formData.department}
-                        onChange={(e) => setFormData({ ...formData, department: e.target.value as any })}
+                        onChange={(e) => setFormData({ ...formData, department: e.target.value as "" | "Consultivo" | "Operacional" | "Comercial" | "Estratégico" })}
                         className="w-full bg-black/50 border border-zinc-700 rounded-lg px-3 py-2.5 text-white text-sm focus:border-primary outline-none cursor-pointer transition-all"
                     >
                         <option value="">Selecione um departamento...</option>

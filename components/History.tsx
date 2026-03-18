@@ -285,7 +285,7 @@ export function History() {
                                 </label>
                                 <select
                                     value={editingLog.department || ""}
-                                    onChange={(e) => setEditingLog({ ...editingLog, department: e.target.value as any })}
+                                    onChange={(e) => setEditingLog({ ...editingLog, department: e.target.value as ActivityLog["department"] })}
                                     className="w-full bg-black/50 border border-zinc-800 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none transition-colors"
                                 >
                                     <option value="" disabled>Selecione um departamento</option>
