@@ -4,9 +4,9 @@ import { useGameStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth-context";
 import { MonthSelector } from "./MonthSelector";
 import { useState } from "react";
-import { doc, deleteDoc } from "firebase/firestore";
+import { doc, deleteDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Clock, Briefcase, Activity, Trash2, Filter } from "lucide-react";
+import { Clock, Briefcase, Activity, Trash2, Filter, Edit2 } from "lucide-react";
 
 function formatDuration(minutes: number) {
     if (!minutes || minutes <= 0) return "0 min";
@@ -48,6 +48,23 @@ export function History() {
         }
     };
 
+    const handleEditDescription = async (logId: string, currentDesc: string) => {
+        const newDesc = window.prompt("Editar Descrição da Atividade:", currentDesc);
+        if (newDesc !== null && newDesc.trim() !== "" && newDesc !== currentDesc) {
+            if (!db) return;
+            try {
+                await updateDoc(doc(db, "activity_logs", logId), {
+                    description: newDesc.trim()
+                });
+                // Note: since app syncs realtime via onSnapshot in page.tsx, 
+                // the logs list will update automatically.
+            } catch (error) {
+                console.error("Erro ao atualizar a descrição:", error);
+                alert("Erro ao atualizar. Tente novamente.");
+            }
+        }
+    };
+
     return (
         <div className="w-full max-w-4xl animate-in fade-in slide-in-from-bottom-4 duration-700">
 
@@ -67,33 +84,31 @@ export function History() {
                     </div>
                 </div>
 
-                {role === 'admin' && (
-                    <div className="flex flex-wrap items-center gap-3 p-4 bg-zinc-900/50 border border-zinc-800 rounded-2xl animate-in fade-in slide-in-from-top-2">
-                        <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-bold uppercase tracking-wider mr-2">
-                            <Filter size={14} />
-                            Filtrar por Associado:
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            <button
-                                onClick={() => setSelectedUserId(null)}
-                                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${!selectedUserId ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' : 'bg-black/40 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-700'}`}
-                            >
-                                TODOS
-                            </button>
-                            {users.map((u) => (
-                                <button
-                                    key={u.id}
-                                    onClick={() => setSelectedUserId(u.id)}
-                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${selectedUserId === u.id ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' : 'bg-black/40 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-700'}`}
-                                >
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={u.avatar_url} className="w-4 h-4 rounded-full object-cover" alt="" />
-                                    {u.full_name.split(' ')[0]}
-                                </button>
-                            ))}
-                        </div>
+                <div className="flex flex-wrap items-center gap-3 p-4 bg-zinc-900/50 border border-zinc-800 rounded-2xl animate-in fade-in slide-in-from-top-2">
+                    <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-bold uppercase tracking-wider mr-2">
+                        <Filter size={14} />
+                        Filtrar por Associado:
                     </div>
-                )}
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            onClick={() => setSelectedUserId(null)}
+                            className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${!selectedUserId ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' : 'bg-black/40 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-700'}`}
+                        >
+                            TODOS
+                        </button>
+                        {users.map((u) => (
+                            <button
+                                key={u.id}
+                                onClick={() => setSelectedUserId(u.id)}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${selectedUserId === u.id ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' : 'bg-black/40 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-700'}`}
+                            >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={u.avatar_url} className="w-4 h-4 rounded-full object-cover" alt="" />
+                                {u.full_name.split(' ')[0]}
+                            </button>
+                        ))}
+                    </div>
+                </div>
             </div>
 
             {/* List */}
@@ -150,6 +165,15 @@ export function History() {
                                             </span>
                                         )}
                                         {log.description}
+                                        {role === 'admin' && (
+                                            <button 
+                                                onClick={() => handleEditDescription(log.id, log.description)}
+                                                className="opacity-0 group-hover:opacity-100 p-1 text-zinc-500 hover:text-primary transition-all ml-1"
+                                                title="Editar descrição"
+                                            >
+                                                <Edit2 size={14} />
+                                            </button>
+                                        )}
                                     </h3>
 
                                     {/* Meta Data */}

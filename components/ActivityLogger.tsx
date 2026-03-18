@@ -222,8 +222,9 @@ export function ActivityLogger() {
                     <div className="w-1/3">
                         <label className="block text-xs font-bold text-zinc-500 uppercase mb-1">Processo #</label>
                         <input
+                            required={selectedType !== 'Extra'}
                             type="text"
-                            placeholder="Opcional"
+                            placeholder="Número do Processo"
                             value={formData.process_number}
                             onChange={(e) => setFormData({ ...formData, process_number: e.target.value })}
                             className="w-full bg-black/50 border border-zinc-700 rounded-lg px-3 py-2.5 text-white text-sm focus:border-primary outline-none"
