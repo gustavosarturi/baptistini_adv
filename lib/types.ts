@@ -1,5 +1,6 @@
 export type UserTier = 'Bronze' | 'Silver' | 'Gold' | 'Diamond';
 export type DifficultyLevel = 'Light' | 'Medium' | 'Hard' | 'Manual' | 'Extra';
+export type Department = 'Consultivo' | 'Operacional' | 'Comercial' | 'Estratégico';
 
 export type Profile = {
     id: string;
@@ -34,7 +35,8 @@ export type ActivityLog = {
     description: string;
     time_spent: number; // minutes
     complexity: DifficultyLevel;
-    extra_type?: string; // New field for specific extra type
+    extra_type?: string;
+    department?: Department;
     base_points: number;
     multiplier: number;
     final_points: number;

@@ -2,7 +2,7 @@
 
 import { useGameStore } from "@/lib/store";
 import { DifficultyLevel, TIER_MULTIPLIERS } from "@/lib/types";
-import { Briefcase, CheckCircle2, Clock, FileText, Scale, Zap, UserPlus } from "lucide-react";
+import { Briefcase, CheckCircle2, Clock, FileText, Scale, Zap, UserPlus, Building2 } from "lucide-react";
 import { useState } from "react";
 import { collection, addDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -21,7 +21,8 @@ export function ActivityLogger() {
         process_number: "",
         description: "",
         time_spent: "",
-        extra_type: ""
+        extra_type: "",
+        department: "" as "" | "Consultivo" | "Operacional" | "Comercial" | "Estratégico"
     });
 
     const [clientSearch, setClientSearch] = useState("");
@@ -57,6 +58,11 @@ export function ActivityLogger() {
             return;
         }
 
+        if (!formData.department) {
+            alert("Por favor, informe o departamento.");
+            return;
+        }
+
         const selectedItem = extraSettings[formData.extra_type];
         
         // Calculate points here to save in Firestore
@@ -85,7 +91,8 @@ export function ActivityLogger() {
                 process_number: "",
                 description: "",
                 time_spent: "",
-                extra_type: ""
+                extra_type: "",
+                department: ""
             });
             setClientSearch("");
 
@@ -160,6 +167,26 @@ export function ActivityLogger() {
                                 </optgroup>
                             );
                         })}
+                    </select>
+                </div>
+
+                {/* Department Selector */}
+                <div>
+                    <label className="block text-xs font-bold text-zinc-500 uppercase mb-1 flex items-center gap-1">
+                        <Building2 size={12} />
+                        Departamento
+                    </label>
+                    <select
+                        required
+                        value={formData.department}
+                        onChange={(e) => setFormData({ ...formData, department: e.target.value as any })}
+                        className="w-full bg-black/50 border border-zinc-700 rounded-lg px-3 py-2.5 text-white text-sm focus:border-primary outline-none cursor-pointer transition-all"
+                    >
+                        <option value="">Selecione um departamento...</option>
+                        <option value="Consultivo">Consultivo</option>
+                        <option value="Operacional">Operacional</option>
+                        <option value="Comercial">Comercial</option>
+                        <option value="Estratégico">Estratégico</option>
                     </select>
                 </div>
 

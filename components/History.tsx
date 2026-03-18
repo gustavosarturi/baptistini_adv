@@ -6,7 +6,8 @@ import { MonthSelector } from "./MonthSelector";
 import { useState } from "react";
 import { doc, deleteDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Clock, Briefcase, Activity, Trash2, Filter, Edit2 } from "lucide-react";
+import { Clock, Briefcase, Activity, Trash2, Filter, Edit2, Building2, X, Save } from "lucide-react";
+import { ActivityLog } from "@/lib/types";
 
 function formatDuration(minutes: number) {
     if (!minutes || minutes <= 0) return "0 min";
@@ -17,9 +18,10 @@ function formatDuration(minutes: number) {
 }
 
 export function History() {
-    const { logs, users, selectedMonth, removeLog } = useGameStore();
+    const { logs, users, selectedMonth, removeLog, clients, extraSettings } = useGameStore();
     const { role } = useAuth();
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+    const [editingLog, setEditingLog] = useState<ActivityLog | null>(null);
 
     // Filter logs for the selected month and user
     const filteredLogs = logs.filter(log => {
@@ -48,20 +50,20 @@ export function History() {
         }
     };
 
-    const handleEditDescription = async (logId: string, currentDesc: string) => {
-        const newDesc = window.prompt("Editar Descrição da Atividade:", currentDesc);
-        if (newDesc !== null && newDesc.trim() !== "" && newDesc !== currentDesc) {
-            if (!db) return;
-            try {
-                await updateDoc(doc(db, "activity_logs", logId), {
-                    description: newDesc.trim()
-                });
-                // Note: since app syncs realtime via onSnapshot in page.tsx, 
-                // the logs list will update automatically.
-            } catch (error) {
-                console.error("Erro ao atualizar a descrição:", error);
-                alert("Erro ao atualizar. Tente novamente.");
-            }
+    const handleUpdateLog = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!db || !editingLog) return;
+        try {
+            await updateDoc(doc(db, "activity_logs", editingLog.id), {
+                description: editingLog.description?.trim(),
+                client_name: editingLog.client_name,
+                department: editingLog.department,
+                extra_type: editingLog.extra_type
+            });
+            setEditingLog(null);
+        } catch (error) {
+            console.error("Erro ao atualizar log:", error);
+            alert("Erro ao atualizar. Tente novamente.");
         }
     };
 
@@ -167,9 +169,9 @@ export function History() {
                                         {log.description}
                                         {role === 'admin' && (
                                             <button 
-                                                onClick={() => handleEditDescription(log.id, log.description)}
+                                                onClick={() => setEditingLog(log)}
                                                 className="opacity-0 group-hover:opacity-100 p-1 text-zinc-500 hover:text-primary transition-all ml-1"
-                                                title="Editar descrição"
+                                                title="Editar registro"
                                             >
                                                 <Edit2 size={14} />
                                             </button>
@@ -187,8 +189,14 @@ export function History() {
                                                 {log.process_number}
                                             </span>
                                         )}
-                                        <div className="flex items-center gap-1.5">
-                                            <Clock size={12} />
+                                        {log.department && (
+                                            <div className="flex items-center gap-1.5 ml-2 border-l border-zinc-800 pl-3">
+                                                <Building2 size={12} className="text-purple-400" />
+                                                <span className="text-purple-400/80 uppercase">{log.department}</span>
+                                            </div>
+                                        )}
+                                        <div className="flex items-center gap-1.5 ml-2 border-l border-zinc-800 pl-3">
+                                            <Clock size={12} className="text-zinc-600" />
                                             <span>{formatDuration(log.time_spent)}</span>
                                         </div>
                                     </div>
@@ -226,6 +234,116 @@ export function History() {
                     })
                 )}
             </div>
+
+            {/* Modal de Edição (Admin) */}
+            {editingLog && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                    <form 
+                        onSubmit={handleUpdateLog} 
+                        className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-300 flex flex-col"
+                    >
+                        <div className="flex items-center justify-between p-6 border-b border-zinc-800 bg-secondary">
+                            <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">
+                                Editar <span className="text-primary">Registro</span>
+                            </h3>
+                            <button 
+                                type="button" 
+                                onClick={() => setEditingLog(null)}
+                                className="p-2 text-zinc-500 hover:text-white bg-black/40 hover:bg-black/60 rounded-full transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-5 overflow-y-auto max-h-[70vh]">
+                            {/* Cliente */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-zinc-500 uppercase flex items-center gap-1.5">
+                                    <Briefcase size={12} /> Cliente
+                                </label>
+                                <select
+                                    value={editingLog.client_name}
+                                    onChange={(e) => setEditingLog({ ...editingLog, client_name: e.target.value })}
+                                    className="w-full bg-black/50 border border-zinc-800 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none transition-colors"
+                                    required
+                                >
+                                    <option value="" disabled>Selecione um cliente</option>
+                                    {clients.map(c => (
+                                        <option key={c.id} value={c.name}>{c.name}</option>
+                                    ))}
+                                    {/* Caso o cliente tenha sido apagado, mas ainda exista no log histórico: */}
+                                    {!clients.find(c => c.name === editingLog.client_name) && (
+                                        <option value={editingLog.client_name}>{editingLog.client_name} (Antigo)</option>
+                                    )}
+                                </select>
+                            </div>
+
+                            {/* Departamento */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-zinc-500 uppercase flex items-center gap-1.5">
+                                    <Building2 size={12} /> Departamento
+                                </label>
+                                <select
+                                    value={editingLog.department || ""}
+                                    onChange={(e) => setEditingLog({ ...editingLog, department: e.target.value as any })}
+                                    className="w-full bg-black/50 border border-zinc-800 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none transition-colors"
+                                >
+                                    <option value="" disabled>Selecione um departamento</option>
+                                    <option value="Consultivo">Consultivo</option>
+                                    <option value="Operacional">Operacional</option>
+                                    <option value="Comercial">Comercial</option>
+                                    <option value="Estratégico">Estratégico</option>
+                                </select>
+                            </div>
+
+                            {/* Tipo de Atividade */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-zinc-500 uppercase flex items-center gap-1.5">
+                                    <Activity size={12} /> Tipo de Atividade
+                                </label>
+                                <select
+                                    value={editingLog.extra_type || ""}
+                                    onChange={(e) => setEditingLog({ ...editingLog, extra_type: e.target.value })}
+                                    className="w-full bg-black/50 border border-zinc-800 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none transition-colors"
+                                >
+                                    <option value="">Nenhum / Atividade Genérica</option>
+                                    {Object.entries(extraSettings).map(([key, item]) => (
+                                        <option key={key} value={key}>{key} ({item.type})</option>
+                                    ))}
+                                    {/* Fallback caso a atividade não exista mais no extraSettings */}
+                                    {editingLog.extra_type && !extraSettings[editingLog.extra_type] && (
+                                        <option value={editingLog.extra_type}>{editingLog.extra_type} (Antipo)</option>
+                                    )}
+                                </select>
+                            </div>
+
+                            {/* Descrição */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-zinc-500 uppercase flex items-center gap-1.5">
+                                    Descrição da Atividade
+                                </label>
+                                <textarea
+                                    value={editingLog.description}
+                                    onChange={(e) => setEditingLog({ ...editingLog, description: e.target.value })}
+                                    className="w-full bg-black/50 border border-zinc-800 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none transition-colors resize-none h-24"
+                                    placeholder="Detalhes sobre a atividade..."
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <div className="p-6 border-t border-zinc-800 bg-secondary flex justify-end">
+                            <button
+                                type="submit"
+                                className="px-6 py-2.5 bg-primary text-black font-black uppercase text-xs rounded-xl hover:bg-white transition-colors flex items-center gap-2 tracking-widest shadow-[0_0_20px_rgba(255,229,0,0.2)]"
+                            >
+                                <Save size={16} />
+                                Salvar Alterações
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
         </div>
     );
 }

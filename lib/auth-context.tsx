@@ -45,14 +45,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 try {
                     if (!db) throw new Error("Firestore not initialized");
 
+                    // Optimistic UI: Check Cache for instant login
+                    let cachedRole: string | null = null;
+                    try {
+                        cachedRole = localStorage.getItem(`role_${email}`);
+                    } catch (e) {
+                        console.warn("Auth: LocalStorage access denied");
+                    }
+
+                    if (cachedRole) {
+                        console.log("Auth: Restored role from cache, unblocking UI instantly");
+                        setRole(cachedRole as 'admin' | 'user');
+                        setIsAuthorized(true);
+                        setUser(authUser);
+                        setLoading(false);
+                    }
+
                     const userDocRef = doc(db, "authorized_users", email);
-                    const userDoc = await getDoc(userDocRef);
+                    
+                    // Fetch with a timeout so it never hangs infinitely
+                    const fetchWithTimeout = new Promise<any>((resolve, reject) => {
+                        const timer = setTimeout(() => reject(new Error("Timeout ao conectar com Firebase")), 8000);
+                        getDoc(userDocRef).then((res) => {
+                            clearTimeout(timer);
+                            resolve(res);
+                        }).catch(err => {
+                            clearTimeout(timer);
+                            reject(err);
+                        });
+                    });
+
+                    const userDoc = await fetchWithTimeout;
                     
                     if (userDoc.exists()) {
                         const userData = userDoc.data();
                         console.log("Auth: User authorized with role:", userData.role);
                         
-                        // Sync Google Profile Info back to Firestore Authorized User
+                        // Sync Google Profile Info back to Firestore
                         try {
                             const updateData: Record<string, string> = {
                                 updated_at: new Date().toISOString(),
@@ -66,23 +95,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                             }
 
                             if (Object.keys(updateData).length > 1) {
-                                await setDoc(userDocRef, updateData, { merge: true });
+                                setDoc(userDocRef, updateData, { merge: true }).catch(err => {
+                                    console.warn("Auth: Failed to sync metadata:", err);
+                                });
                             }
                         } catch (syncErr) {
-                            console.warn("Auth: Failed to sync metadata:", syncErr);
+                            console.warn("Auth: Failed to prepare metadata sync:", syncErr);
                         }
 
-                        setRole(userData.role || 'user');
+                        const newRole = userData.role || 'user';
+                        setRole(newRole);
                         setIsAuthorized(true);
+                        localStorage.setItem(`role_${email}`, newRole);
                     } else {
                         console.warn("Auth: User NOT in authorized_users collection");
                         setRole(null);
                         setIsAuthorized(false);
+                        try { localStorage.removeItem(`role_${email}`); } catch (e) {}
                     }
                 } catch (error) {
-                    console.error("Auth: Firestore error:", error);
-                    setRole(null);
-                    setIsAuthorized(false);
+                    console.error("Auth: Firestore error or Timeout:", error);
+                    // On timeout or offline, if we have cache, we keep it. If not, we block.
+                    let hasCache = false;
+                    try { hasCache = !!localStorage.getItem(`role_${email}`); } catch (e) {}
+                    
+                    if (!hasCache) {
+                        setRole(null);
+                        setIsAuthorized(false);
+                        // Optional fallback: alert the user
+                        // alert("O servidor demorou muito para responder. Tente novamente.");
+                    }
                 } finally {
                     setUser(authUser);
                     setLoading(false);

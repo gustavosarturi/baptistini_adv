@@ -12,7 +12,8 @@ import { Login } from "@/components/Login";
 import { Unauthorized } from "@/components/Unauthorized";
 import { useAuth } from "@/lib/auth-context";
 import { Trophy, LayoutDashboard, Settings as SettingsIcon, History as HistoryIcon, Users, BarChart3, ShieldCheck, LogOut } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { toast } from "sonner";
 import { onSnapshot, collection, doc, query, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useGameStore } from "@/lib/store";
@@ -52,12 +53,58 @@ export default function Home() {
   }, [isAuthorized, setUsers]);
 
   // Sync Logs from activity_logs
+  const isInitialLogsLoad = useRef(true);
+
   useEffect(() => {
     if (!isAuthorized || !db) return;
 
     console.log("Firestore: Syncing activity_logs...");
     const q = query(collection(db, "activity_logs"), orderBy("date", "desc"), limit(500));
     const unsubscribe = onSnapshot(q, (snapshot) => {
+
+        if (!isInitialLogsLoad.current) {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === "added") {
+                    const newLog = change.doc.data() as ActivityLog;
+                    try {
+                        // Buscar nome de quem pontuou usando a store global atual
+                        const profileList = useGameStore.getState().users;
+                        const userProfile = profileList.find(u => u.id === newLog.user_id) || { full_name: newLog.user_id.split('@')[0] };
+                        
+                        // Exibir balão de notificação para a tela de todos
+                        toast.success(`${userProfile.full_name.split(' ')[0]} acabou de pontuar!`, {
+                            description: `Ganhou +${newLog.final_points} XP (${newLog.department || 'Geral'})`,
+                            icon: "🎮",
+                            duration: 5000,
+                        });
+                        
+                        // Efeito Sonoro estilo "Moeda de Jogo" (100% Nativo sem arquivos externos)
+                        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+                        const oscillator = audioCtx.createOscillator();
+                        const gainNode = audioCtx.createGain();
+                        
+                        oscillator.type = 'sine';
+                        oscillator.frequency.setValueAtTime(987.77, audioCtx.currentTime); // B5 note
+                        oscillator.frequency.setValueAtTime(1318.51, audioCtx.currentTime + 0.1); // E6 note
+                        
+                        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+                        gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.05);
+                        gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.5);
+                        
+                        oscillator.connect(gainNode);
+                        gainNode.connect(audioCtx.destination);
+                        
+                        oscillator.start(audioCtx.currentTime);
+                        oscillator.stop(audioCtx.currentTime + 0.5);
+                    } catch (err) {
+                        console.log("Sound check skipped (user hasn't interacted with page yet)", err);
+                    }
+                }
+            });
+        }
+        
+        isInitialLogsLoad.current = false;
+
         const logList: ActivityLog[] = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data() as Omit<ActivityLog, 'id'>

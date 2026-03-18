@@ -10,6 +10,7 @@ export function AnalyticsDashboard() {
     const [clientSortBy, setClientSortBy] = useState<'count' | 'time'>('count');
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
     const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
+    const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -55,8 +56,12 @@ export function AnalyticsDashboard() {
             list = list.filter(l => l.extra_type === selectedActivity);
         }
 
+        if (selectedDepartment) {
+            list = list.filter(l => l.department === selectedDepartment);
+        }
+
         return list;
-    }, [logs, selectedMonth, selectedUserId, selectedActivity]);
+    }, [logs, selectedMonth, selectedUserId, selectedActivity, selectedDepartment]);
 
     // 1. Top Clientes
     const clientStats = useMemo(() => {
@@ -122,6 +127,7 @@ export function AnalyticsDashboard() {
         let historyLogs = logs;
         if (selectedUserId) historyLogs = historyLogs.filter(l => l.user_id === selectedUserId);
         if (selectedActivity) historyLogs = historyLogs.filter(l => l.extra_type === selectedActivity);
+        if (selectedDepartment) historyLogs = historyLogs.filter(l => l.department === selectedDepartment);
 
         historyLogs.forEach(log => {
             const month = log.date.slice(0, 7);
@@ -149,13 +155,14 @@ export function AnalyticsDashboard() {
                 .filter(l => {
                     const monthMatch = selectedMonth === 'all' || l.date.startsWith(selectedMonth);
                     const activityMatch = !selectedActivity || l.extra_type === selectedActivity;
-                    return monthMatch && l.user_id === user.id && activityMatch;
+                    const deptMatch = !selectedDepartment || l.department === selectedDepartment;
+                    return monthMatch && l.user_id === user.id && activityMatch && deptMatch;
                 })
                 .reduce((acc, l) => acc + l.final_points, 0);
             return { user, score };
         });
         return rankings.sort((a, b) => b.score - a.score);
-    }, [logs, selectedMonth, users, selectedActivity]);
+    }, [logs, selectedMonth, users, selectedActivity, selectedDepartment]);
 
     const maxClientValue = Math.max(...clientStats.map(c => clientSortBy === 'count' ? c.count : c.time), 1);
     const maxActivityFreq = Math.max(...activityStats.sortedByFrequency.map(s => s[1].count), 1);
@@ -168,8 +175,10 @@ export function AnalyticsDashboard() {
         <div className="w-full max-w-6xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
 
             {/* Cabeçalho de Performance */}
-            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6 bg-zinc-900/40 p-8 rounded-3xl border border-zinc-800 shadow-2xl backdrop-blur-sm">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+            <div className="flex flex-col gap-8 bg-zinc-900/40 p-8 rounded-3xl border border-zinc-800 shadow-2xl backdrop-blur-sm">
+                
+                {/* Linha 1: Titulo e Filtros */}
+                <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6">
                     <div className="flex items-center gap-4">
                         <div className="p-4 bg-primary rounded-2xl shadow-[0_0_20px_rgba(255,229,0,0.3)]">
                             <TrendingUp className="text-black" size={32} />
@@ -196,17 +205,43 @@ export function AnalyticsDashboard() {
                                         ATIVIDADE: {selectedActivity} (X)
                                     </button>
                                 )}
+
+                                {selectedDepartment && (
+                                    <button
+                                        onClick={() => setSelectedDepartment(null)}
+                                        className="text-purple-400 hover:underline cursor-pointer flex items-center gap-1 bg-purple-400/10 px-2 py-0.5 rounded"
+                                    >
+                                        DEPTO: {selectedDepartment} (X)
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-bold text-zinc-500 uppercase ml-1">Período de Análise</label>
-                        <MonthSelector />
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                        <div className="flex flex-col gap-2">
+                            <label className="text-[10px] font-bold text-zinc-500 uppercase ml-1">Depto</label>
+                            <select
+                                value={selectedDepartment || ""}
+                                onChange={(e) => setSelectedDepartment(e.target.value || null)}
+                                className="bg-black/50 border border-zinc-700 rounded-lg px-3 py-2 text-white text-xs focus:border-primary outline-none cursor-pointer transition-all"
+                            >
+                                <option value="">Todos</option>
+                                <option value="Consultivo">Consultivo</option>
+                                <option value="Operacional">Operacional</option>
+                                <option value="Comercial">Comercial</option>
+                                <option value="Estratégico">Estratégico</option>
+                            </select>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <label className="text-[10px] font-bold text-zinc-500 uppercase ml-1">Período de Análise</label>
+                            <MonthSelector />
+                        </div>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 border-t md:border-t-0 md:border-l border-zinc-800 pt-6 md:pt-0 md:pl-8">
+                {/* Linha 2: Estatísticas */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-8 border-t border-zinc-800 pt-6">
                     <div className="space-y-1">
                         <p className="text-[10px] font-bold text-zinc-500 uppercase">Atividades</p>
                         <p className="text-2xl font-black text-white">{filteredLogs.length}</p>
