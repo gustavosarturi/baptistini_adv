@@ -399,8 +399,12 @@ export function AnalyticsDashboard() {
                                         {client.name}
                                     </span>
                                     <div className="flex items-center gap-4">
-                                        <span className="text-[10px] font-mono text-zinc-500">{formatTime(client.time)}</span>
-                                        <span className="text-sm font-black text-white">{client.count} ATIVIDADES</span>
+                                        <span className={`font-mono transition-all ${clientSortBy === 'time' ? 'text-sm font-black text-white' : 'text-[10px] text-zinc-500'}`}>
+                                            {formatTime(client.time)}
+                                        </span>
+                                        <span className={`font-black uppercase transition-all ${clientSortBy === 'count' ? 'text-sm text-white' : 'text-[10px] text-zinc-500'}`}>
+                                            {client.count} ATIVIDADES
+                                        </span>
                                     </div>
                                 </div>
                                 <div className="h-2.5 bg-zinc-900 rounded-full overflow-hidden border border-zinc-800/50">
