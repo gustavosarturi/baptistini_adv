@@ -44,7 +44,8 @@ export default function Home() {
                 username: doc.id.split('@')[0], // Extract username from email
                 full_name: data.name || "Colaborador",
                 avatar_url: data.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${doc.id}`,
-                tier: data.tier || "Bronze"
+                tier: data.tier || "Bronze",
+                department: data.department
             };
         });
         setUsers(profileList);
@@ -191,7 +192,7 @@ export default function Home() {
           </div>
           {user.photoURL && (
             /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={user.photoURL} alt={user.displayName || ""} className="w-8 h-8 rounded-full border border-zinc-700" />
+            <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=27272a&color=fff`} referrerPolicy="no-referrer" alt={user.displayName || ""} className="w-8 h-8 rounded-full border border-zinc-700" />
           )}
           <button
             onClick={signOut}

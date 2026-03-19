@@ -105,7 +105,7 @@ export function History() {
                                 className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${selectedUserId === u.id ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' : 'bg-black/40 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-700'}`}
                             >
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={u.avatar_url} className="w-4 h-4 rounded-full object-cover" alt="" />
+                                <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name || 'User')}&background=27272a&color=fff`} referrerPolicy="no-referrer" className="w-4 h-4 rounded-full object-cover" alt="" />
                                 {u.full_name.split(' ')[0]}
                             </button>
                         ))}
@@ -127,31 +127,32 @@ export function History() {
                         return (
                             <div
                                 key={log.id}
-                                className="bg-secondary border border-zinc-800/50 hover:border-zinc-700 p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center gap-5 transition-all hover:bg-zinc-900/80 group"
+                                className="bg-secondary border border-zinc-800/50 hover:border-zinc-700 p-4 sm:p-5 rounded-2xl grid grid-cols-[auto_1fr] sm:grid-cols-[auto_1fr_auto] gap-x-4 gap-y-3 sm:gap-x-5 items-start sm:items-center transition-all hover:bg-zinc-900/80 group relative"
                             >
                                 {/* Date Badge */}
-                                <div className="flex flex-col items-center bg-black/40 border border-zinc-800 rounded-xl p-3 min-w-[70px]">
-                                    <span className="text-xs font-bold text-zinc-500 uppercase">
+                                <div className="flex flex-col items-center justify-center bg-black/40 border border-zinc-800 rounded-xl p-2 sm:p-3 w-[65px] sm:w-[70px] flex-shrink-0 self-start sm:self-center">
+                                    <span className="text-[10px] sm:text-xs font-bold text-zinc-500 uppercase leading-none mb-1">
                                         {new Date(log.created_at || log.date + "T12:00:00").toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
                                     </span>
-                                    <span className="text-2xl font-black text-white">
+                                    <span className="text-xl sm:text-2xl font-black text-white leading-none">
                                         {new Date(log.created_at || log.date + "T12:00:00").getDate().toString().padStart(2, '0')}
                                     </span>
                                     {log.created_at && (
-                                        <span className="text-[10px] text-zinc-500 font-mono mt-1">
+                                        <span className="text-[8px] sm:text-[10px] text-zinc-500 font-mono mt-1.5 leading-none">
                                             {new Date(log.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                         </span>
                                     )}
                                 </div>
 
                                 {/* User & Content */}
-                                <div className="flex-1 flex flex-col gap-1 w-full">
+                                <div className="flex flex-col gap-1 w-full min-w-0">
                                     {/* User Row */}
                                     <div className="flex items-center gap-2 mb-1">
                                         {/* eslint-disable-next-line @next/next/no-img-element */}
                                         <img
-                                            src={user.avatar_url}
+                                            src={user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name || 'User')}&background=27272a&color=fff`}
                                             alt={user.username}
+                                            referrerPolicy="no-referrer"
                                             className="w-5 h-5 rounded-full object-cover border border-zinc-700"
                                         />
                                         <span className="text-xs font-bold text-zinc-400 uppercase tracking-wide">
@@ -160,9 +161,9 @@ export function History() {
                                     </div>
 
                                     {/* Activity Type & Description */}
-                                    <h3 className="text-white font-bold leading-snug flex items-center gap-2">
+                                    <h3 className="text-white text-sm sm:text-base font-bold leading-snug flex flex-wrap items-center gap-2">
                                         {log.extra_type && (
-                                            <span className="text-primary bg-primary/10 px-2 py-0.5 rounded text-[10px] uppercase tracking-tighter border border-primary/20">
+                                            <span className="text-primary bg-primary/10 px-2 py-0.5 rounded text-[9px] sm:text-[10px] uppercase tracking-tighter border border-primary/20">
                                                 {log.extra_type}
                                             </span>
                                         )}
@@ -179,23 +180,23 @@ export function History() {
                                     </h3>
 
                                     {/* Meta Data */}
-                                    <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-zinc-500 font-mono">
-                                        <div className="flex items-center gap-1.5">
+                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-1 text-[10px] sm:text-xs text-zinc-500 font-mono">
+                                        <div className="flex items-center gap-1.5 flex-shrink-0">
                                             <Briefcase size={12} />
-                                            <span className="text-zinc-400">{log.client_name}</span>
+                                            <span className="text-zinc-400 max-w-[120px] sm:max-w-none truncate">{log.client_name}</span>
                                         </div>
                                         {log.process_number && (
-                                            <span className="px-1.5 py-0.5 bg-zinc-900 rounded text-[10px] border border-zinc-800">
+                                            <span className="px-1.5 py-0.5 bg-zinc-900 rounded text-[9px] border border-zinc-800 flex-shrink-0">
                                                 {log.process_number}
                                             </span>
                                         )}
                                         {log.department && (
-                                            <div className="flex items-center gap-1.5 ml-2 border-l border-zinc-800 pl-3">
+                                            <div className="flex items-center gap-1.5 sm:border-l border-zinc-800 sm:pl-3 flex-shrink-0 border-l-0 pl-0">
                                                 <Building2 size={12} className="text-purple-400" />
                                                 <span className="text-purple-400/80 uppercase">{log.department}</span>
                                             </div>
                                         )}
-                                        <div className="flex items-center gap-1.5 ml-2 border-l border-zinc-800 pl-3">
+                                        <div className="flex items-center gap-1.5 sm:border-l border-zinc-800 sm:pl-3 flex-shrink-0 border-l-0 pl-0">
                                             <Clock size={12} className="text-zinc-600" />
                                             <span>{formatDuration(log.time_spent)}</span>
                                         </div>
@@ -203,7 +204,7 @@ export function History() {
                                 </div>
 
                                 {/* Score & Delete Badge */}
-                                <div className="flex flex-row sm:flex-col items-center gap-4 sm:gap-2 min-w-[100px] justify-end sm:text-right w-full sm:w-auto border-t sm:border-t-0 sm:border-l border-zinc-800 pt-3 sm:pt-0 sm:pl-5 mt-2 sm:mt-0 relative">
+                                <div className="col-span-2 sm:col-span-1 flex flex-row sm:flex-col items-center gap-4 sm:gap-2 justify-between sm:justify-end sm:text-right border-t sm:border-t-0 sm:border-l border-zinc-800 pt-3 sm:pt-0 sm:pl-5 mt-1 sm:mt-0 relative w-full">
 
                                     {role === 'admin' && (
                                         <button

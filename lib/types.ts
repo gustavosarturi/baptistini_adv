@@ -8,6 +8,7 @@ export type Profile = {
     full_name: string;
     avatar_url: string;
     tier: UserTier;
+    department?: Department;
 };
 
 export type AuthorizedUser = {
@@ -15,6 +16,7 @@ export type AuthorizedUser = {
     role: 'admin' | 'user';
     name?: string;
     avatar_url?: string; // New: Sync from Google
+    department?: Department;
     added_at: string;
 };
 

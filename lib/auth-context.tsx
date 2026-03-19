@@ -42,11 +42,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 const email = authUser.email?.toLowerCase() || "";
                 console.log("Auth: Checking authorization for:", email);
                 
+                let cachedRole: string | null = null;
+
                 try {
                     if (!db) throw new Error("Firestore not initialized");
 
                     // Optimistic UI: Check Cache for instant login
-                    let cachedRole: string | null = null;
                     try {
                         cachedRole = localStorage.getItem(`role_${email}`);
                     } catch {
@@ -125,7 +126,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         // Optional fallback: alert the user
                         // alert("O servidor demorou muito para responder. Tente novamente.");
                     }
-                } finally {
+                }
+                
+                // If it wasn't cached, we update UI here after firestore finishes or fails
+                if (!cachedRole) {
                     setUser(authUser);
                     setLoading(false);
                 }

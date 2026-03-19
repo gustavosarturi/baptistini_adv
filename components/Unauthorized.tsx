@@ -27,7 +27,7 @@ export function Unauthorized() {
           <div className="bg-zinc-800/50 p-4 rounded-xl border border-zinc-700/50 flex items-center gap-3">
             {user?.photoURL && (
               /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={user.photoURL} alt={user.displayName || ""} className="w-10 h-10 rounded-full border border-zinc-600" />
+              <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=27272a&color=fff`} referrerPolicy="no-referrer" alt={user.displayName || ""} className="w-10 h-10 rounded-full border border-zinc-600" />
             )}
             <div className="text-left overflow-hidden">
               <p className="text-xs text-zinc-500 font-bold uppercase truncate">{user?.displayName}</p>

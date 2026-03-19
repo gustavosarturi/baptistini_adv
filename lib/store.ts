@@ -19,6 +19,7 @@ interface GameState {
 
     setCurrentUser: (userId: string) => void;
     setTier: (userId: string, tier: UserTier) => void;
+    setDepartment: (userId: string, department: string) => void;
 
     // Client Management
     addClient: (name: string, email?: string, phone?: string) => void;
@@ -66,6 +67,13 @@ export const useGameStore = create<GameState>((set, get) => ({
         set((state) => ({
             users: state.users.map(u => u.id === userId ? { ...u, tier } : u),
             currentUser: state.currentUser?.id === userId ? { ...state.currentUser, tier } : state.currentUser
+        }));
+    },
+
+    setDepartment: (userId: string, department: string) => {
+        set((state) => ({
+            users: state.users.map(u => u.id === userId ? { ...u, department: department as any } : u),
+            currentUser: state.currentUser?.id === userId ? { ...state.currentUser, department: department as any } : state.currentUser
         }));
     },
 

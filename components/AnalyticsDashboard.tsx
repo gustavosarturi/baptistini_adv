@@ -602,7 +602,7 @@ export function AnalyticsDashboard() {
                                 <div className="flex items-center gap-4 mb-4">
                                     <div className="relative">
                                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img src={rank.user.avatar_url} className={`w-12 h-12 rounded-full border-2 transition-all ${selectedUserId === rank.user.id ? 'border-primary grayscale-0' : 'border-zinc-700 grayscale group-hover:grayscale-0'}`} alt="" />
+                                        <img src={rank.user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(rank.user.full_name || 'User')}&background=27272a&color=fff`} referrerPolicy="no-referrer" className={`w-12 h-12 rounded-full border-2 transition-all ${selectedUserId === rank.user.id ? 'border-primary grayscale-0' : 'border-zinc-700 grayscale group-hover:grayscale-0'}`} alt="" />
                                         {i === 0 && <div className="absolute -top-2 -right-2 bg-primary text-black text-[8px] font-black px-1.5 py-0.5 rounded shadow-lg animate-bounce">#1</div>}
                                     </div>
                                     <div>

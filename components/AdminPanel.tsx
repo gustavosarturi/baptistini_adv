@@ -8,7 +8,7 @@ import { db } from "@/lib/firebase";
 import { collection, query, getDocs, setDoc, doc, deleteDoc, orderBy } from "firebase/firestore";
 
 export function AdminPanel() {
-    const { users, setTier } = useGameStore();
+    const { users, setTier, setDepartment } = useGameStore();
     const [activeSubTab, setActiveSubTab] = useState<'tiers' | 'auth'>('tiers');
     
     // Auth Management State
@@ -150,7 +150,7 @@ export function AdminPanel() {
                             <div key={user.id} className="bg-secondary border border-zinc-800 p-6 rounded-2xl flex items-center justify-between group hover:border-zinc-700 transition-all">
                                 <div className="flex items-center gap-4">
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={user.avatar_url} className="w-12 h-12 rounded-full border-2 border-zinc-800 group-hover:border-primary/50 transition-all" alt="" />
+                                    <img src={user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name || 'User')}&background=27272a&color=fff`} referrerPolicy="no-referrer" className="w-12 h-12 rounded-full border-2 border-zinc-800 group-hover:border-primary/50 transition-all" alt="" />
                                     <div>
                                         <h3 className="text-sm font-black text-white uppercase tracking-wide">{user.full_name}</h3>
                                         <div className="flex items-center gap-2 mt-1">
@@ -166,27 +166,52 @@ export function AdminPanel() {
                                     </div>
                                 </div>
 
-                                <div className="flex flex-col gap-1">
-                                    <label className="text-[8px] font-bold text-zinc-600 uppercase mb-1 ml-1">Alterar Tier</label>
-                                    <select
-                                        value={user.tier}
-                                        onChange={async (e) => {
-                                            if (!db) return;
-                                            const newTier = e.target.value as UserTier;
-                                            setTier(user.id, newTier);
-                                            try {
-                                                await setDoc(doc(db, "authorized_users", user.id), { tier: newTier }, { merge: true });
-                                            } catch (err) {
-                                                console.error("Error updating tier:", err);
-                                            }
-                                        }}
-                                        className="bg-black border border-zinc-800 rounded-lg px-3 py-2 text-xs font-bold text-white focus:border-primary outline-none cursor-pointer appearance-none text-center min-w-[100px]"
-                                    >
-                                        <option value="Bronze">Bronze</option>
-                                        <option value="Silver">Silver</option>
-                                        <option value="Gold">Gold</option>
-                                        <option value="Diamond">Diamond</option>
-                                    </select>
+                                <div className="flex flex-col sm:flex-row items-center gap-3">
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-[8px] font-bold text-zinc-600 uppercase mb-1 ml-1">Depto</label>
+                                        <select
+                                            value={user.department || ""}
+                                            onChange={async (e) => {
+                                                if (!db) return;
+                                                const newDept = e.target.value;
+                                                setDepartment(user.id, newDept);
+                                                try {
+                                                    await setDoc(doc(db, "authorized_users", user.id), { department: newDept || null }, { merge: true });
+                                                } catch (err) {
+                                                    console.error("Error updating department:", err);
+                                                }
+                                            }}
+                                            className="bg-black border border-zinc-800 rounded-lg px-3 py-2 text-xs font-bold text-white focus:border-primary outline-none cursor-pointer appearance-none text-center min-w-[100px]"
+                                        >
+                                            <option value="">Nenhum</option>
+                                            <option value="Consultivo">Consultivo</option>
+                                            <option value="Operacional">Operacional</option>
+                                            <option value="Comercial">Comercial</option>
+                                            <option value="Estratégico">Estratégico</option>
+                                        </select>
+                                    </div>
+                                    <div className="flex flex-col gap-1 w-full sm:w-auto">
+                                        <label className="text-[8px] font-bold text-zinc-600 uppercase mb-1 ml-1">Alterar Tier</label>
+                                        <select
+                                            value={user.tier}
+                                            onChange={async (e) => {
+                                                if (!db) return;
+                                                const newTier = e.target.value as UserTier;
+                                                setTier(user.id, newTier);
+                                                try {
+                                                    await setDoc(doc(db, "authorized_users", user.id), { tier: newTier }, { merge: true });
+                                                } catch (err) {
+                                                    console.error("Error updating tier:", err);
+                                                }
+                                            }}
+                                            className="bg-black border border-zinc-800 rounded-lg px-3 py-2 text-xs font-bold text-white focus:border-primary outline-none cursor-pointer appearance-none text-center min-w-[100px] w-full"
+                                        >
+                                            <option value="Bronze">Bronze</option>
+                                            <option value="Silver">Silver</option>
+                                            <option value="Gold">Gold</option>
+                                            <option value="Diamond">Diamond</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                         ))}

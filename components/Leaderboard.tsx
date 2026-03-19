@@ -53,8 +53,9 @@ export function Leaderboard() {
                                 <div className="relative">
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img
-                                        src={entry.user.avatar_url}
+                                        src={entry.user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(entry.user.full_name || 'User')}&background=27272a&color=fff`}
                                         alt={entry.user.username}
+                                        referrerPolicy="no-referrer"
                                         className={`
                         w-12 h-12 rounded-full border-2 object-cover bg-zinc-800
                         ${index === 0 ? 'border-yellow-400' : 'border-zinc-700'}
