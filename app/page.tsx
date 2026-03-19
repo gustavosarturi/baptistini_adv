@@ -209,6 +209,7 @@ export default function Home() {
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center rounded-full shadow-[0_0_20px_rgba(255,242,59,0.3)]">
             {/* Logo */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/bap.svg" alt="Baptistini Logo" className="w-16 h-16 sm:w-20 sm:h-20" />
           </div>
           <h1 className="text-4xl sm:text-6xl font-black tracking-tighter uppercase italic">

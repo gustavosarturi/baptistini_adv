@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { ActivityLog, DifficultyLevel, DEFAULT_EXTRA_VALUES, Profile, TIER_MULTIPLIERS, ExtraSetting, Client, UserTier } from './types';
+import { ActivityLog, DifficultyLevel, DEFAULT_EXTRA_VALUES, Profile, TIER_MULTIPLIERS, ExtraSetting, Client, UserTier, Department } from './types';
 
 interface GameState {
     users: Profile[];
@@ -72,8 +72,8 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     setDepartment: (userId: string, department: string) => {
         set((state) => ({
-            users: state.users.map(u => u.id === userId ? { ...u, department: department as any } : u),
-            currentUser: state.currentUser?.id === userId ? { ...state.currentUser, department: department as any } : state.currentUser
+            users: state.users.map(u => u.id === userId ? { ...u, department: department as Department } : u),
+            currentUser: state.currentUser?.id === userId ? { ...state.currentUser, department: department as Department } : state.currentUser
         }));
     },
 
