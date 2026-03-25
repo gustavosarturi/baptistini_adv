@@ -1,6 +1,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { Auth, getAuth, GoogleAuthProvider } from "firebase/auth";
 import { Firestore, getFirestore } from "firebase/firestore";
+import { FirebaseStorage, getStorage } from "firebase/storage";
 
 const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -25,16 +26,18 @@ if (typeof window !== "undefined") {
 let auth: Auth | null = null;
 let db: Firestore | null = null;
 let googleProvider: GoogleAuthProvider | null = null;
+let storage: FirebaseStorage | null = null;
 
 if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "undefined") {
     try {
         const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
         auth = getAuth(app);
         db = getFirestore(app);
+        storage = getStorage(app);
         googleProvider = new GoogleAuthProvider();
     } catch (error) {
         console.error("Firebase initialization error:", error);
     }
 }
 
-export { auth, db, googleProvider };
+export { auth, db, googleProvider, storage };

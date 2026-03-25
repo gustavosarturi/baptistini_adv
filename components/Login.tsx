@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/lib/auth-context";
-import { Trophy, LogIn } from "lucide-react";
+import { LogIn } from "lucide-react";
 import { auth } from "@/lib/firebase";
 
 export function Login() {
@@ -11,8 +11,9 @@ export function Login() {
         <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-black text-white">
             <div className="w-full max-w-md p-8 rounded-3xl bg-zinc-900/50 border border-zinc-800 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in duration-500">
                 <div className="flex flex-col items-center gap-6 mb-10 text-center">
-                    <div className="p-4 bg-primary/20 rounded-2xl border border-primary/30 rotate-6">
-                        <Trophy size={48} className="text-primary" />
+                    <div className="flex items-center justify-center rounded-full shadow-[0_0_30px_rgba(255,242,59,0.3)] mb-4 bg-black p-4 z-10">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/bap.svg" alt="Baptistini Logo" className="w-16 h-16 sm:w-20 sm:h-20" />
                     </div>
                     <div>
                         <h1 className="text-3xl font-black tracking-tighter uppercase italic mb-2">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useGameStore } from "@/lib/store";
+import { useAuth } from "@/lib/auth-context";
 import { DifficultyLevel, TIER_MULTIPLIERS } from "@/lib/types";
 import { Briefcase, CheckCircle2, Clock, FileText, Scale, Zap, UserPlus, Building2, Search, ChevronDown, Star, X } from "lucide-react";
 import { useState, useMemo, useRef, useEffect } from "react";
@@ -8,7 +9,8 @@ import { collection, addDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 export function ActivityLogger() {
-    const { currentUser, extraSettings, clients, logs } = useGameStore();
+    const { currentUser, extraSettings, clients, logs, users } = useGameStore();
+    const { role } = useAuth();
 
     const [activitySearch, setActivitySearch] = useState("");
     const [isActivityDropdownOpen, setIsActivityDropdownOpen] = useState(false);
@@ -44,13 +46,14 @@ export function ActivityLogger() {
     };
 
     const [formData, setFormData] = useState({
+        target_user_id: "",
         date: getLocalDateString(),
         client_name: "",
         process_number: "",
         description: "",
         time_spent: "",
         extra_type: "",
-        department: "" as "" | "Consultivo" | "Operacional" | "Comercial" | "Estratégico"
+        department: "" as "" | "Consultivo" | "Operacional" | "Comercial" | "Estratégico" | "Marketing"
     });
 
     const [clientSearch, setClientSearch] = useState("");
@@ -86,7 +89,10 @@ export function ActivityLogger() {
             return;
         }
 
-        const finalDepartment = currentUser.department || formData.department;
+        const targetUserId = formData.target_user_id || currentUser.id;
+        const targetUser = users.find(u => u.id === targetUserId) || currentUser;
+
+        const finalDepartment = formData.department || targetUser.department;
         if (!finalDepartment) {
             alert("Por favor, informe o departamento.");
             return;
@@ -96,16 +102,17 @@ export function ActivityLogger() {
         
         // Calculate points here to save in Firestore
         const base_points = selectedItem.points;
-        const multiplier = selectedItem.type === 'Extra' ? 1 : TIER_MULTIPLIERS[currentUser.tier];
+        const multiplier = selectedItem.type === 'Extra' ? 1 : TIER_MULTIPLIERS[targetUser.tier];
         const final_points = base_points * multiplier;
 
         try {
             await addDoc(collection(db, "activity_logs"), {
                 ...formData,
+                target_user_id: undefined, // remove from firestore
                 department: finalDepartment,
                 date: getLocalDateString(),
-                user_id: currentUser.id,
-                user_name: currentUser.full_name,
+                user_id: targetUser.id,
+                user_name: targetUser.full_name,
                 complexity: selectedItem.type,
                 time_spent: Number(formData.time_spent) || 0,
                 base_points,
@@ -116,6 +123,7 @@ export function ActivityLogger() {
 
             // Reset form
             setFormData({
+                target_user_id: formData.target_user_id, // Keep the same selected user
                 date: getLocalDateString(),
                 client_name: "",
                 process_number: "",
@@ -135,6 +143,11 @@ export function ActivityLogger() {
 
     if (!currentUser) return null;
 
+    let targetUser = currentUser;
+    if (role === 'admin' && formData.target_user_id) {
+        targetUser = users.find(u => u.id === formData.target_user_id) || currentUser;
+    }
+
     // Calculate Preview Logic
     let previewBase = 0;
     let previewMultiplier = 1;
@@ -145,7 +158,7 @@ export function ActivityLogger() {
         if (setting) {
             previewBase = setting.points;
             selectedType = setting.type;
-            previewMultiplier = setting.type === 'Extra' ? 1 : TIER_MULTIPLIERS[currentUser.tier];
+            previewMultiplier = setting.type === 'Extra' ? 1 : TIER_MULTIPLIERS[targetUser.tier];
         }
     }
 
@@ -167,6 +180,22 @@ export function ActivityLogger() {
             </h2>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                {role === 'admin' && (
+                    <div className="mb-2">
+                        <label className="block text-xs font-bold text-zinc-500 uppercase mb-1 flex items-center gap-1">
+                            <Zap size={12} /> Registrar para (Admin)
+                        </label>
+                        <select
+                            value={formData.target_user_id || currentUser.id}
+                            onChange={(e) => setFormData({ ...formData, target_user_id: e.target.value })}
+                            className="w-full bg-black/50 border border-zinc-700 rounded-lg px-3 py-2.5 text-white text-sm focus:border-primary outline-none transition-all cursor-pointer"
+                        >
+                            {users.map(u => (
+                                <option key={u.id} value={u.id}>{u.full_name}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
                 {/* Activity Selector (Combobox) */}
                 <div ref={activityDropdownRef} className="relative z-50">
                     <label className="block text-xs font-bold text-primary uppercase mb-1 flex items-center gap-1">
@@ -242,7 +271,7 @@ export function ActivityLogger() {
                             )}
 
                             {/* Categorias */}
-                            {(['Light', 'Medium', 'Hard', 'Extra'] as DifficultyLevel[]).map(type => {
+                            {(role === 'admin' ? ['Light', 'Medium', 'Hard', 'Extra'] : ['Light', 'Medium', 'Hard'] as DifficultyLevel[]).map(type => {
                                 const items = Object.entries(extraSettings).filter(([key, item]) => 
                                     item.type === type && key.toLowerCase().includes(activitySearch.toLowerCase())
                                 );
@@ -298,16 +327,16 @@ export function ActivityLogger() {
                     </label>
                     <select
                         required
-                        disabled={!!currentUser.department}
-                        value={currentUser.department || formData.department}
-                        onChange={(e) => setFormData({ ...formData, department: e.target.value as "" | "Consultivo" | "Operacional" | "Comercial" | "Estratégico" })}
-                        className={`w-full bg-black/50 border border-zinc-700 rounded-lg px-3 py-2.5 text-white text-sm focus:border-primary outline-none transition-all ${!!currentUser.department ? 'cursor-not-allowed opacity-70 border-primary/30 text-primary font-bold' : 'cursor-pointer'}`}
+                        value={formData.department || targetUser.department || ""}
+                        onChange={(e) => setFormData({ ...formData, department: e.target.value as "" | "Consultivo" | "Operacional" | "Comercial" | "Estratégico" | "Marketing" })}
+                        className="w-full bg-black/50 border border-zinc-700 rounded-lg px-3 py-2.5 text-white text-sm focus:border-primary outline-none transition-all cursor-pointer"
                     >
                         <option value="">Selecione um departamento...</option>
                         <option value="Consultivo">Consultivo</option>
                         <option value="Operacional">Operacional</option>
                         <option value="Comercial">Comercial</option>
                         <option value="Estratégico">Estratégico</option>
+                        <option value="Marketing">Marketing</option>
                     </select>
                 </div>
 
@@ -427,11 +456,11 @@ export function ActivityLogger() {
                         <div className="bg-black/30 border border-zinc-800 rounded-lg p-2 flex items-center justify-between h-[34px]">
                             <span className="text-[10px] font-bold text-zinc-500 uppercase px-1">Seu Tier</span>
                             <span className={`text-xs font-black px-2 py-0.5 rounded
-                                ${currentUser.tier === 'Diamond' ? 'bg-blue-500/20 text-blue-400' :
-                                    currentUser.tier === 'Gold' ? 'bg-primary/20 text-primary' :
-                                        currentUser.tier === 'Silver' ? 'bg-zinc-400/20 text-zinc-400' : 'bg-red-400/20 text-red-100'}
+                                ${targetUser.tier === 'Diamond' ? 'bg-blue-500/20 text-blue-400' :
+                                    targetUser.tier === 'Gold' ? 'bg-primary/20 text-primary' :
+                                        targetUser.tier === 'Silver' ? 'bg-zinc-400/20 text-zinc-400' : 'bg-red-400/20 text-red-100'}
                             `}>
-                                {currentUser.tier} (×{TIER_MULTIPLIERS[currentUser.tier]})
+                                {targetUser.tier} (×{TIER_MULTIPLIERS[targetUser.tier]})
                             </span>
                         </div>
                     </div>
@@ -452,7 +481,7 @@ export function ActivityLogger() {
                             <>
                                 <span className="text-zinc-600 text-lg">{previewBase}</span>
                                 <span className="text-zinc-700 text-sm">×</span>
-                                <span className="text-primary">{TIER_MULTIPLIERS[currentUser.tier]}</span>
+                                <span className="text-primary">{TIER_MULTIPLIERS[targetUser.tier]}</span>
                                 <span className="text-zinc-700 text-sm">=</span>
                                 <span className={`drop-shadow-[0_0_10px_rgba(255,215,0,0.3)] ${previewTotal === 0 ? 'text-zinc-600' : 'text-primary'}`}>
                                     {previewTotal}

@@ -206,14 +206,14 @@ export default function Home() {
 
       {/* Header */}
       <header className="flex flex-col items-center gap-4 mb-8 text-center text-white">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center rounded-full shadow-[0_0_20px_rgba(255,242,59,0.3)]">
+        <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 mb-2 sm:mb-0">
+          <div className="flex items-center justify-center rounded-full shadow-[0_0_20px_rgba(255,242,59,0.3)] mb-2 sm:mb-0 bg-black p-2">
             {/* Logo */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/bap.svg" alt="Baptistini Logo" className="w-16 h-16 sm:w-20 sm:h-20" />
+            <img src="/bap.svg" alt="Baptistini Logo" className="w-20 h-20" />
           </div>
-          <h1 className="text-4xl sm:text-6xl font-black tracking-tighter uppercase italic">
-            BAPTISTINI <span className="text-primary">INCENTIVOS</span>
+          <h1 className="text-4xl sm:text-6xl font-black tracking-tighter uppercase italic text-center sm:text-left">
+            BAPTISTINI<br className="sm:hidden" /> <span className="text-primary">INCENTIVOS</span>
           </h1>
         </div>
         <p className="flex items-center gap-2 text-zinc-500 font-medium tracking-wide text-sm uppercase">

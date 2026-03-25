@@ -1,6 +1,6 @@
 export type UserTier = 'Bronze' | 'Silver' | 'Gold' | 'Diamond';
 export type DifficultyLevel = 'Light' | 'Medium' | 'Hard' | 'Manual' | 'Extra';
-export type Department = 'Consultivo' | 'Operacional' | 'Comercial' | 'Estratégico';
+export type Department = 'Consultivo' | 'Operacional' | 'Comercial' | 'Estratégico' | 'Marketing';
 
 export type Profile = {
     id: string;

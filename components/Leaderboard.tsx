@@ -109,11 +109,7 @@ export function Leaderboard() {
                 )}
             </div>
 
-            {/* Monthly Goal Marker */}
-            <div className="mt-6 pt-4 border-t border-zinc-800 flex justify-between text-xs text-zinc-500">
-                <span>META MENSAL</span>
-                <span className="text-primary font-bold">10,000 PTS</span>
-            </div>
+
         </div>
     );
 }

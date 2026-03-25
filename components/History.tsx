@@ -86,15 +86,15 @@ export function History() {
                     </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3 p-4 bg-zinc-900/50 border border-zinc-800 rounded-2xl animate-in fade-in slide-in-from-top-2">
-                    <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-bold uppercase tracking-wider mr-2">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-zinc-900/50 border border-zinc-800 rounded-2xl animate-in fade-in slide-in-from-top-2">
+                    <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
                         <Filter size={14} />
                         Filtrar por Associado:
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex overflow-x-auto pb-1 sm:pb-0 sm:flex-wrap gap-2 scrollbar-thin scrollbar-thumb-zinc-800 w-full sm:w-auto">
                         <button
                             onClick={() => setSelectedUserId(null)}
-                            className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${!selectedUserId ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' : 'bg-black/40 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-700'}`}
+                            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${!selectedUserId ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' : 'bg-black/40 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-700'}`}
                         >
                             TODOS
                         </button>
@@ -102,7 +102,7 @@ export function History() {
                             <button
                                 key={u.id}
                                 onClick={() => setSelectedUserId(u.id)}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${selectedUserId === u.id ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' : 'bg-black/40 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-700'}`}
+                                className={`flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${selectedUserId === u.id ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' : 'bg-black/40 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-700'}`}
                             >
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name || 'User')}&background=27272a&color=fff`} referrerPolicy="no-referrer" className="w-4 h-4 rounded-full object-cover" alt="" />
@@ -294,6 +294,7 @@ export function History() {
                                     <option value="Operacional">Operacional</option>
                                     <option value="Comercial">Comercial</option>
                                     <option value="Estratégico">Estratégico</option>
+                                    <option value="Marketing">Marketing</option>
                                 </select>
                             </div>
 

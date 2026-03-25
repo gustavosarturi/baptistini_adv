@@ -188,6 +188,7 @@ export function AdminPanel() {
                                             <option value="Operacional">Operacional</option>
                                             <option value="Comercial">Comercial</option>
                                             <option value="Estratégico">Estratégico</option>
+                                            <option value="Marketing">Marketing</option>
                                         </select>
                                     </div>
                                     <div className="flex flex-col gap-1 w-full sm:w-auto">

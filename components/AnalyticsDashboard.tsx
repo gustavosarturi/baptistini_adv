@@ -231,6 +231,7 @@ export function AnalyticsDashboard() {
                                 <option value="Operacional">Operacional</option>
                                 <option value="Comercial">Comercial</option>
                                 <option value="Estratégico">Estratégico</option>
+                                <option value="Marketing">Marketing</option>
                             </select>
                         </div>
                         <div className="flex flex-col gap-2">

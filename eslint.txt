@@ -1,0 +1,6 @@
+
+C:\Users\Lenovo\.gemini\antigravity\scratch\gamification-ranking\components\Login.tsx
+  4:10  error  'Trophy' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 1 problem (1 error, 0 warnings)
+
