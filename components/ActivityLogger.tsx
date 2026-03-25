@@ -105,10 +105,11 @@ export function ActivityLogger() {
         const multiplier = selectedItem.type === 'Extra' ? 1 : TIER_MULTIPLIERS[targetUser.tier];
         const final_points = base_points * multiplier;
 
+        const { target_user_id, ...dataToSave } = formData;
+
         try {
             await addDoc(collection(db, "activity_logs"), {
-                ...formData,
-                target_user_id: undefined, // remove from firestore
+                ...dataToSave,
                 department: finalDepartment,
                 date: getLocalDateString(),
                 user_id: targetUser.id,

@@ -60,6 +60,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         setIsAuthorized(true);
                         setUser(authUser);
                         setLoading(false);
+                    } else {
+                        // Force loading state since we must hit network
+                        setLoading(true);
                     }
 
                     const userDocRef = doc(db, "authorized_users", email);
@@ -151,9 +154,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const signInWithGoogle = async () => {
         if (!auth || !googleProvider) return;
         try {
+            setLoading(true); // Provide instant visual feedback
             await signInWithPopup(auth, googleProvider);
         } catch (error) {
             console.error("Error signing in with Google:", error);
+            setLoading(false); // Restore UI if user cancels popup
         }
     };
 
