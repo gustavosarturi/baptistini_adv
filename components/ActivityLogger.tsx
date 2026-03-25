@@ -105,6 +105,7 @@ export function ActivityLogger() {
         const multiplier = selectedItem.type === 'Extra' ? 1 : TIER_MULTIPLIERS[targetUser.tier];
         const final_points = base_points * multiplier;
 
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { target_user_id, ...dataToSave } = formData;
 
         try {
