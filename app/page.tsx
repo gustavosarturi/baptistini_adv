@@ -6,23 +6,39 @@ import { Settings } from "@/components/Settings";
 import { History } from "@/components/History";
 import { MonthSelector } from "@/components/MonthSelector";
 import { ClientRegistration } from "@/components/ClientRegistration";
+import { RewardsTab } from "@/components/RewardsTab";
 import { AdminPanel } from "@/components/AdminPanel";
 import { AnalyticsDashboard } from "@/components/AnalyticsDashboard";
 import { Login } from "@/components/Login";
 import { Unauthorized } from "@/components/Unauthorized";
 import { useAuth } from "@/lib/auth-context";
-import { Trophy, LayoutDashboard, Settings as SettingsIcon, History as HistoryIcon, Users, BarChart3, ShieldCheck, LogOut } from "lucide-react";
+import { Trophy, LayoutDashboard, Settings as SettingsIcon, History as HistoryIcon, Users, BarChart3, ShieldCheck, LogOut, Gift, X } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { onSnapshot, collection, doc, query, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useGameStore } from "@/lib/store";
-import { Profile, ActivityLog, Client, ExtraSetting } from "@/lib/types";
+import { Profile, ActivityLog, Client, ExtraSetting, RewardItem } from "@/lib/types";
 
 export default function Home() {
   const { user, role, isAuthorized, loading, signOut } = useAuth();
-  const { setUsers, setLogs, setClients, setExtraSettings, setCurrentUser, users } = useGameStore();
-  const [activeTab, setActiveTab] = useState<'ranking' | 'analytics' | 'history' | 'settings' | 'clients' | 'admin'>('ranking');
+  const { setUsers, setLogs, setClients, setExtraSettings, setCurrentUser, users, getUserBalance, setAvailableRewards } = useGameStore();
+  const [activeTab, setActiveTab] = useState<'ranking' | 'analytics' | 'history' | 'settings' | 'clients' | 'admin' | 'rewards'>('ranking');
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+
+  useEffect(() => {
+    if (user && isAuthorized) {
+        const hasSeen = localStorage.getItem('saw_update_v1_1');
+        if (!hasSeen) {
+            setShowUpdateModal(true);
+        }
+    }
+  }, [user, isAuthorized]);
+
+  const handleCloseUpdate = () => {
+      localStorage.setItem('saw_update_v1_1', 'true');
+      setShowUpdateModal(false);
+  };
 
   // If a non-admin tries to access an admin tab, redirect to ranking
   useEffect(() => {
@@ -154,6 +170,23 @@ export default function Home() {
     return () => unsubscribe();
   }, [isAuthorized, setExtraSettings]);
 
+  // Sync Rewards from settings/rewards doc
+  useEffect(() => {
+    if (!isAuthorized || !db) return;
+    
+    console.log("Firestore: Syncing availableRewards...");
+    const unsubscribe = onSnapshot(doc(db, "settings", "rewards"), (snapshot) => {
+        if (snapshot.exists()) {
+            const data = snapshot.data();
+            const rewardsList = Object.values(data) as RewardItem[];
+            setAvailableRewards(rewardsList);
+        } else {
+            setAvailableRewards([]);
+        }
+    });
+    return () => unsubscribe();
+  }, [isAuthorized, setAvailableRewards]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black">
@@ -178,6 +211,37 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center min-h-screen p-6 sm:p-12 font-sans bg-black selection:bg-primary selection:text-black">
 
+      {/* Update Modal */}
+      {showUpdateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-secondary border border-zinc-700/50 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden relative">
+                <button onClick={handleCloseUpdate} className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors">
+                    <X size={20} />
+                </button>
+                <div className="bg-primary/10 p-6 border-b border-primary/20 flex flex-col items-center text-center">
+                    <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-black mb-4">
+                        <Gift size={24} />
+                    </div>
+                    <h2 className="text-xl font-black text-white uppercase tracking-wider">Nova Atualização!</h2>
+                    <p className="text-primary font-bold text-sm tracking-widest mt-1">SISTEMA GAMIFICADO V1.1</p>
+                </div>
+                <div className="p-6 space-y-4">
+                    <div className="text-zinc-300 text-sm leading-relaxed space-y-4 text-left">
+                        <p>Temos novidades incríveis na sua área de <strong>Recompensas</strong>!</p>
+                        <ul className="list-disc list-inside space-y-2 text-zinc-400">
+                            <li><strong className="text-white">Novo Catálogo de Prêmios:</strong> Agora ficou ainda mais fácil pedir resgates. Não precisa mais digitar os prêmios manualmente, basta escolher diretamente na nossa vitrine.</li>
+                            <li><strong className="text-white">Mais Transparência:</strong> O custo de cada prêmio é puxado automaticamente do sistema, sem erros.</li>
+                            <li><strong className="text-white">Foto de Perfil:</strong> Adicionamos a foto do usuário também nos relatórios de saldos e resgates do painel administrativo.</li>
+                        </ul>
+                    </div>
+                    <button onClick={handleCloseUpdate} className="w-full mt-6 bg-primary text-black font-black uppercase tracking-wider py-3 rounded-xl hover:bg-yellow-400 transition-colors shadow-[0_0_15px_rgba(255,215,0,0.2)]">
+                        Entendi, vamos lá!
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+
       {/* User Bar */}
       <div className="w-full max-w-6xl flex justify-end mb-4 animate-in fade-in slide-in-from-top-4 duration-500">
         <div className="flex items-center gap-4 bg-zinc-900/50 p-2 pl-4 rounded-full border border-zinc-800">
@@ -188,6 +252,10 @@ export default function Home() {
               <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${isAdmin ? 'bg-primary text-black' : 'bg-zinc-800 text-zinc-400'}`}>
                 {role}
               </span>
+              <div className="flex items-center gap-1 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/20 text-yellow-500">
+                <Gift size={10} />
+                <span className="text-[10px] font-black">{getUserBalance(user.email || "")} pts</span>
+              </div>
             </div>
           </div>
           {user.photoURL && (
@@ -250,6 +318,16 @@ export default function Home() {
           >
             <Users size={16} />
             Clientes
+          </button>
+
+          <button
+            onClick={() => setActiveTab('rewards')}
+            className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-bold transition-all
+              ${activeTab === 'rewards' ? 'bg-primary text-black shadow-lg' : 'text-zinc-400 hover:text-white'}
+            `}
+          >
+            <Gift size={16} />
+            Recompensas
           </button>
 
           <button
@@ -317,6 +395,10 @@ export default function Home() {
 
         {activeTab === 'clients' && (
           <ClientRegistration />
+        )}
+
+        {activeTab === 'rewards' && (
+          <RewardsTab />
         )}
 
         {activeTab === 'history' && (

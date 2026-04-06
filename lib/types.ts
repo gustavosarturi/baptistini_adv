@@ -43,6 +43,8 @@ export type ActivityLog = {
     multiplier: number;
     final_points: number;
     created_at: string;
+    type?: 'activity' | 'redemption';
+    status?: 'approved' | 'pending' | 'rejected';
 };
 
 export type ExtraSetting = {
@@ -80,4 +82,10 @@ export const TIER_MULTIPLIERS: Record<UserTier, number> = {
     'Silver': 2,
     'Gold': 3,
     'Diamond': 5
+};
+
+export type RewardItem = {
+    id: string;
+    name: string;
+    cost: number;
 };

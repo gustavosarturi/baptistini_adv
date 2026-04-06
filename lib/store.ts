@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { ActivityLog, DifficultyLevel, DEFAULT_EXTRA_VALUES, Profile, TIER_MULTIPLIERS, ExtraSetting, Client, UserTier, Department } from './types';
+import { ActivityLog, DifficultyLevel, DEFAULT_EXTRA_VALUES, Profile, TIER_MULTIPLIERS, ExtraSetting, Client, UserTier, Department, RewardItem } from './types';
 
 interface GameState {
     users: Profile[];
@@ -34,6 +34,11 @@ interface GameState {
     setClients: (clients: Client[]) => void;
 
     getLeaderboard: () => { user: Profile; score: number }[];
+    getUserBalance: (userId: string) => number;
+
+    // Available Rewards
+    availableRewards: RewardItem[];
+    setAvailableRewards: (rewards: RewardItem[]) => void;
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -44,6 +49,9 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     extraSettings: DEFAULT_EXTRA_VALUES,
     setExtraSettings: (settings: Record<string, ExtraSetting>) => set({ extraSettings: settings }),
+
+    availableRewards: [],
+    setAvailableRewards: (rewards: RewardItem[]) => set({ availableRewards: rewards }),
 
     addExtraSetting: (name: string, value: number, type: DifficultyLevel) => set((state) => ({
         extraSettings: { ...state.extraSettings, [name]: { points: value, type } }
@@ -145,6 +153,11 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         const scores = users.map((user) => {
             const userLogs = logs.filter((log) => {
+                // Ignore rejected logs
+                if (log.status === 'rejected') return false;
+                // The leaderboard only cares about gained points (XP), not spent points (Redemptions)
+                if (log.type === 'redemption') return false;
+
                 if (selectedMonth === 'all') {
                     return log.user_id === user.id;
                 }
@@ -156,5 +169,14 @@ export const useGameStore = create<GameState>((set, get) => ({
         });
 
         return scores.sort((a, b) => b.score - a.score);
+    },
+
+    getUserBalance: (userId: string) => {
+        const { logs } = get();
+        // Base points earned (ignoring redemptions) minus the points spent (redemptions approved or pending)
+        // Note: logs for redemptions are added with negative final_points, so we just sum everything except rejected.
+        return logs
+            .filter((log) => log.user_id === userId && log.status !== 'rejected')
+            .reduce((total, log) => total + log.final_points, 0);
     },
 }));

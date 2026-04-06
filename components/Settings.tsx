@@ -1,27 +1,31 @@
 "use client";
 
 import { useGameStore } from "@/lib/store";
-import { DifficultyLevel } from "@/lib/types";
-import { Save, Settings as SettingsIcon, Plus, Trash2 } from "lucide-react";
+import { DifficultyLevel, RewardItem } from "@/lib/types";
+import { Save, Settings as SettingsIcon, Plus, Trash2, Gift } from "lucide-react";
 import { useState, useEffect } from "react";
 import { doc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 export function Settings() {
-    const { extraSettings } = useGameStore();
+    const { extraSettings, availableRewards } = useGameStore();
 
     const [localExtraSettings, setLocalExtraSettings] = useState(extraSettings);
+    const [localRewards, setLocalRewards] = useState(availableRewards);
     const [newItem, setNewItem] = useState({ name: "", value: "", type: "Extra" as DifficultyLevel });
+    const [newReward, setNewReward] = useState({ name: "", cost: "" });
     const [isSaved, setIsSaved] = useState(false);
 
     useEffect(() => {
         setLocalExtraSettings(extraSettings);
-    }, [extraSettings]);
+        setLocalRewards(availableRewards);
+    }, [extraSettings, availableRewards]);
 
     const handleSave = async () => {
         if (!db) return;
         try {
             await setDoc(doc(db, "settings", "extra"), localExtraSettings);
+            await setDoc(doc(db, "settings", "rewards"), Object.fromEntries(localRewards.map(r => [r.id, r])));
             setIsSaved(true);
             setTimeout(() => setIsSaved(false), 2000);
         } catch (error) {
@@ -49,6 +53,27 @@ export function Settings() {
         const rest = { ...localExtraSettings };
         delete rest[key];
         setLocalExtraSettings(rest);
+    };
+
+    const handleAddReward = () => {
+        if (!newReward.name || newReward.cost === "") return;
+        const reward: RewardItem = {
+            id: Math.random().toString(36).substr(2, 9),
+            name: newReward.name,
+            cost: Number(newReward.cost)
+        };
+        setLocalRewards([...localRewards, reward]);
+        setNewReward({ name: "", cost: "" });
+    };
+
+    const handleRemoveReward = (id: string) => {
+        setLocalRewards(localRewards.filter(r => r.id !== id));
+    };
+
+    const handleRewardChange = (id: string, newCost: string) => {
+        setLocalRewards(localRewards.map(r => 
+            r.id === id ? { ...r, cost: Number(newCost) } : r
+        ));
     };
 
     return (
@@ -171,6 +196,84 @@ export function Settings() {
                     <p>
                         <strong className="text-zinc-400">Nota:</strong> Itens marcados como &apos;Incentivo&apos; somam pontos fixos. Itens marcados como &apos;Light/Medium/Hard&apos; servem como atalhos no formulário de registro e seus pontos são multiplicados pelo Tier do associado.
                     </p>
+                </div>
+            </div>
+
+            {/* Rewards Management */}
+            <div>
+                <div className="flex items-center justify-between mb-6 pt-6 border-t border-zinc-800">
+                    <div className="flex items-center gap-3">
+                        <div className="p-3 bg-zinc-800 rounded-xl">
+                            <Gift className="text-zinc-400" size={24} />
+                        </div>
+                        <h2 className="text-2xl font-bold text-white uppercase tracking-tight">
+                            Catálogo de Recompensas
+                        </h2>
+                    </div>
+                </div>
+
+                <div className="bg-zinc-900/30 border border-zinc-800 p-6 rounded-2xl mb-8 shadow-inner">
+                    <h3 className="text-sm font-bold text-zinc-400 uppercase mb-4 tracking-widest">Adicionar Recompensa</h3>
+                    <div className="flex flex-col sm:flex-row gap-4 items-end">
+                        <div className="flex-1 w-full">
+                            <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1 ml-1">Nome do Prêmio</label>
+                            <input
+                                type="text"
+                                placeholder="ex: Ifood R$ 50"
+                                value={newReward.name}
+                                onChange={(e) => setNewReward({ ...newReward, name: e.target.value })}
+                                className="w-full bg-black/50 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:border-primary outline-none transition-all"
+                            />
+                        </div>
+                        <div className="sm:w-48 w-full">
+                            <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1 ml-1">Custo (Pontos)</label>
+                            <div className="relative">
+                                <input
+                                    type="number"
+                                    placeholder="500"
+                                    value={newReward.cost}
+                                    onChange={(e) => setNewReward({ ...newReward, cost: e.target.value })}
+                                    className="w-full bg-black/50 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:border-primary outline-none no-spinner transition-all font-mono"
+                                />
+                                <span className="absolute right-3 top-3.5 text-[10px] font-bold text-zinc-600">PTS</span>
+                            </div>
+                        </div>
+                        <button
+                            onClick={handleAddReward}
+                            disabled={!newReward.name || newReward.cost === ""}
+                            className="bg-primary hover:bg-yellow-400 disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed text-black font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all h-[46px] w-full sm:w-auto"
+                        >
+                            <Plus size={18} />
+                            Adicionar
+                        </button>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {localRewards.map(reward => (
+                        <div key={reward.id} className="group bg-zinc-900/40 border border-zinc-800/80 p-5 rounded-2xl relative transition-all hover:border-zinc-700 hover:bg-zinc-900/60 hover:translate-y-[-2px] hover:shadow-xl">
+                            <button
+                                onClick={() => handleRemoveReward(reward.id)}
+                                className="absolute -top-2 -right-2 p-2 bg-red-950/90 text-red-100 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-600 shadow-lg z-10"
+                                title="Remover item"
+                            >
+                                <Trash2 size={14} />
+                            </button>
+
+                            <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-2 truncate pr-6 tracking-wider" title={reward.name}>
+                                {reward.name}
+                            </label>
+                            <div className="relative">
+                                <input
+                                    type="number"
+                                    value={reward.cost}
+                                    onChange={(e) => handleRewardChange(reward.id, e.target.value)}
+                                    className="w-full bg-black/40 border border-zinc-800 rounded-xl px-4 py-3 text-white font-mono text-lg focus:border-primary outline-none no-spinner transition-all text-primary"
+                                />
+                                <span className="absolute right-4 top-3.5 text-[10px] font-bold text-zinc-600">PTS</span>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
 
