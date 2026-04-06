@@ -2,10 +2,10 @@
 
 import { useGameStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth-context";
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { collection, addDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Gift, Wallet, CheckCircle2, AlertCircle, Clock } from "lucide-react";
+import { Gift, Wallet, CheckCircle2, Clock } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from "recharts";
 
 export function RewardsTab() {
@@ -79,12 +79,6 @@ export function RewardsTab() {
         }
     };
 
-    const handleApprove = async (logId: string) => {
-        // Here we'd actually update firebase. For simplicity, we assume we update the document.
-        // We need to implement this correctly if we have a Firebase update module.
-        // Since store doesn't directly update Firebase, we will import updateDoc.
-        // Wait, I should import updateDoc from 'firebase/firestore' at the top.
-    }
 
     // Helper to calc for a specific user and year
     const calcUserYearData = (userId: string, year: number) => {
