@@ -413,15 +413,16 @@ export function RewardsTab() {
                     Extrato de <span className="text-primary">Resgates</span>
                 </h2>
                 <div className="space-y-3">
-                    {logs.filter(log => log.type === 'redemption' && log.status === 'approved' && !users.find(u => u.id === log.user_id)?.is_hidden).length === 0 ? (
+                    {logs.filter(log => log.type === 'redemption' && log.status !== 'rejected' && !users.find(u => u.id === log.user_id)?.is_hidden).length === 0 ? (
                         <p className="text-zinc-500 italic text-sm text-center py-8">Nenhum resgate efetuado ainda.</p>
                     ) : (
-                        logs.filter(log => log.type === 'redemption' && log.status === 'approved' && !users.find(u => u.id === log.user_id)?.is_hidden)
+                        logs.filter(log => log.type === 'redemption' && log.status !== 'rejected' && !users.find(u => u.id === log.user_id)?.is_hidden)
                         .sort((a,b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime())
                         .map(log => {
                             const user = users.find(u => u.id === log.user_id);
+                            const isPending = log.status === 'pending';
                             return (
-                                <div key={log.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-black/40 border border-zinc-800 rounded-xl hover:border-zinc-700 transition-colors gap-3 sm:gap-0">
+                                <div key={log.id} className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-black/40 border rounded-xl transition-colors gap-3 sm:gap-0 ${isPending ? 'border-yellow-500/20 hover:border-yellow-500/40' : 'border-zinc-800 hover:border-zinc-700'}`}>
                                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full text-xs">
                                         <div className="text-zinc-500 font-mono w-24">
                                             {new Date(log.created_at || log.date).toLocaleDateString('pt-BR')}
@@ -432,11 +433,12 @@ export function RewardsTab() {
                                             <span className="text-white font-bold uppercase">{user?.full_name || log.user_id.split('@')[0]}</span>
                                         </div>
                                         <div className="text-zinc-400 flex-1 sm:ml-2">
-                                            resgatou <span className="text-primary font-bold">{log.description}</span>
+                                            {isPending ? 'solicitou' : 'resgatou'} <span className={`${isPending ? 'text-yellow-500' : 'text-primary'} font-bold`}>{log.description}</span>
+                                            {isPending && <span className="ml-2 text-[9px] uppercase font-bold text-yellow-500/50 bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20">Pendente</span>}
                                         </div>
                                     </div>
-                                    <div className="text-red-400 font-black flex items-center gap-1 self-end sm:self-auto bg-red-400/10 px-3 py-1 rounded-lg border border-red-400/20">
-                                        {log.final_points} <span className="text-[10px] uppercase font-bold text-red-500/50 pt-0.5">XP</span>
+                                    <div className={`${isPending ? 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20' : 'text-red-400 bg-red-400/10 border-red-400/20'} font-black flex items-center gap-1 self-end sm:self-auto px-3 py-1 rounded-lg border`}>
+                                        {Math.abs(log.final_points)} <span className={`text-[10px] uppercase font-bold ${isPending ? 'text-yellow-500/50' : 'text-red-500/50'} pt-0.5`}>XP</span>
                                     </div>
                                 </div>
                             );
