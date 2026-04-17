@@ -45,7 +45,7 @@ export function AnalyticsDashboard() {
         let list = logs;
 
         if (hideBaptistini) {
-            list = list.filter(l => l.client_name?.toLowerCase() !== 'baptistini');
+            list = list.filter(l => !l.client_name?.toLowerCase().includes('baptistini'));
         }
 
         // Só aplicamos filtro de mês se não "all"
@@ -130,7 +130,7 @@ export function AnalyticsDashboard() {
 
         // Filtramos apenas por usuário e atividade para o gráfico histórico
         let historyLogs = logs;
-        if (hideBaptistini) historyLogs = historyLogs.filter(l => l.client_name?.toLowerCase() !== 'baptistini');
+        if (hideBaptistini) historyLogs = historyLogs.filter(l => !l.client_name?.toLowerCase().includes('baptistini'));
         if (selectedUserId) historyLogs = historyLogs.filter(l => l.user_id === selectedUserId);
         if (selectedActivity) historyLogs = historyLogs.filter(l => l.extra_type === selectedActivity);
         if (selectedDepartment) historyLogs = historyLogs.filter(l => l.department === selectedDepartment);
@@ -162,7 +162,7 @@ export function AnalyticsDashboard() {
                     const monthMatch = selectedMonth === 'all' || l.date.startsWith(selectedMonth);
                     const activityMatch = !selectedActivity || l.extra_type === selectedActivity;
                     const deptMatch = !selectedDepartment || l.department === selectedDepartment;
-                    const baptMatch = hideBaptistini ? l.client_name?.toLowerCase() !== 'baptistini' : true;
+                    const baptMatch = hideBaptistini ? !l.client_name?.toLowerCase().includes('baptistini') : true;
                     return monthMatch && l.user_id === user.id && activityMatch && deptMatch && baptMatch;
                 })
                 .reduce((acc, l) => acc + l.final_points, 0);
