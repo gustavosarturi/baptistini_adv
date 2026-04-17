@@ -13,6 +13,7 @@ export function AnalyticsDashboard() {
     const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [hideBaptistini, setHideBaptistini] = useState(true);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Listar todas as atividades únicas presentes nos logs ou configurações
@@ -42,6 +43,10 @@ export function AnalyticsDashboard() {
     // Filtrar logs pelo mês selecionado, usuário e atividade
     const filteredLogs = useMemo(() => {
         let list = logs;
+
+        if (hideBaptistini) {
+            list = list.filter(l => l.client_name?.toLowerCase() !== 'baptistini');
+        }
 
         // Só aplicamos filtro de mês se não "all"
         if (selectedMonth !== "all") {
@@ -125,6 +130,7 @@ export function AnalyticsDashboard() {
 
         // Filtramos apenas por usuário e atividade para o gráfico histórico
         let historyLogs = logs;
+        if (hideBaptistini) historyLogs = historyLogs.filter(l => l.client_name?.toLowerCase() !== 'baptistini');
         if (selectedUserId) historyLogs = historyLogs.filter(l => l.user_id === selectedUserId);
         if (selectedActivity) historyLogs = historyLogs.filter(l => l.extra_type === selectedActivity);
         if (selectedDepartment) historyLogs = historyLogs.filter(l => l.department === selectedDepartment);
@@ -156,7 +162,8 @@ export function AnalyticsDashboard() {
                     const monthMatch = selectedMonth === 'all' || l.date.startsWith(selectedMonth);
                     const activityMatch = !selectedActivity || l.extra_type === selectedActivity;
                     const deptMatch = !selectedDepartment || l.department === selectedDepartment;
-                    return monthMatch && l.user_id === user.id && activityMatch && deptMatch;
+                    const baptMatch = hideBaptistini ? l.client_name?.toLowerCase() !== 'baptistini' : true;
+                    return monthMatch && l.user_id === user.id && activityMatch && deptMatch && baptMatch;
                 })
                 .reduce((acc, l) => acc + l.final_points, 0);
             return { user, score };
@@ -219,6 +226,17 @@ export function AnalyticsDashboard() {
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                        <div className="flex flex-col gap-2 justify-end h-full pt-5">
+                            <label className="flex items-center gap-2 cursor-pointer bg-black/40 px-3 py-2 rounded-lg border border-zinc-700/50 hover:border-zinc-500 transition-colors h-[34px]">
+                                <input 
+                                    type="checkbox" 
+                                    checked={!hideBaptistini} 
+                                    onChange={(e) => setHideBaptistini(!e.target.checked)} 
+                                    className="w-3.5 h-3.5 rounded border-zinc-700 bg-black/50 accent-primary cursor-pointer" 
+                                />
+                                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">Incluir Baptistini</span>
+                            </label>
+                        </div>
                         <div className="flex flex-col gap-2">
                             <label className="text-[10px] font-bold text-zinc-500 uppercase ml-1">Depto</label>
                             <select
