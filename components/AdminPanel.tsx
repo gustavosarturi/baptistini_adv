@@ -220,7 +220,7 @@ export function AdminPanel() {
                                                 if (!db) return;
                                                 const newState = !user.is_hidden;
                                                 try {
-                                                    await updateDoc(doc(db, "users_profiles", user.id), { is_hidden: newState });
+                                                    await setDoc(doc(db, "authorized_users", user.id), { is_hidden: newState }, { merge: true });
                                                 } catch (err) {
                                                     console.error("Error hiding user:", err);
                                                 }
