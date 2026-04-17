@@ -406,6 +406,44 @@ export function RewardsTab() {
                 </div>
                 </div>
             )}
+
+            {/* Extrato Global de Resgates */}
+            <div className="w-full bg-secondary border border-zinc-800 rounded-2xl p-6 shadow-xl mt-8">
+                <h2 className="text-xl font-black text-white mb-6 uppercase tracking-wider italic flex items-center gap-3">
+                    Extrato de <span className="text-primary">Resgates</span>
+                </h2>
+                <div className="space-y-3">
+                    {logs.filter(log => log.type === 'redemption' && log.status === 'approved' && !users.find(u => u.id === log.user_id)?.is_hidden).length === 0 ? (
+                        <p className="text-zinc-500 italic text-sm text-center py-8">Nenhum resgate efetuado ainda.</p>
+                    ) : (
+                        logs.filter(log => log.type === 'redemption' && log.status === 'approved' && !users.find(u => u.id === log.user_id)?.is_hidden)
+                        .sort((a,b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime())
+                        .map(log => {
+                            const user = users.find(u => u.id === log.user_id);
+                            return (
+                                <div key={log.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-black/40 border border-zinc-800 rounded-xl hover:border-zinc-700 transition-colors gap-3 sm:gap-0">
+                                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full text-xs">
+                                        <div className="text-zinc-500 font-mono w-24">
+                                            {new Date(log.created_at || log.date).toLocaleDateString('pt-BR')}
+                                        </div>
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img src={user?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.full_name || 'User')}`} className="w-6 h-6 rounded-full border border-zinc-700" alt="" />
+                                            <span className="text-white font-bold uppercase">{user?.full_name || log.user_id.split('@')[0]}</span>
+                                        </div>
+                                        <div className="text-zinc-400 flex-1 sm:ml-2">
+                                            resgatou <span className="text-primary font-bold">{log.description}</span>
+                                        </div>
+                                    </div>
+                                    <div className="text-red-400 font-black flex items-center gap-1 self-end sm:self-auto bg-red-400/10 px-3 py-1 rounded-lg border border-red-400/20">
+                                        {log.final_points} <span className="text-[10px] uppercase font-bold text-red-500/50 pt-0.5">XP</span>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
+            </div>
         </div>
     );
 }
