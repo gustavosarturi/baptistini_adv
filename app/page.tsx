@@ -61,7 +61,8 @@ export default function Home() {
                 full_name: data.name || "Colaborador",
                 avatar_url: data.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${doc.id}`,
                 tier: data.tier || "Bronze",
-                department: data.department
+                department: data.department,
+                is_hidden: data.is_hidden
             };
         });
         setUsers(profileList);
