@@ -151,7 +151,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     getLeaderboard: () => {
         const { users, logs, selectedMonth } = get();
 
-        const scores = users.map((user) => {
+        const scores = users.filter(u => !u.is_hidden).map((user) => {
             const userLogs = logs.filter((log) => {
                 // Ignore rejected logs
                 if (log.status === 'rejected') return false;

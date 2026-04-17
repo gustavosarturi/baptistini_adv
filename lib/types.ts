@@ -9,6 +9,7 @@ export type Profile = {
     avatar_url: string;
     tier: UserTier;
     department?: Department;
+    is_hidden?: boolean;
 };
 
 export type AuthorizedUser = {

@@ -98,7 +98,7 @@ export function History() {
                         >
                             TODOS
                         </button>
-                        {users.map((u) => (
+                        {users.filter(u => !u.is_hidden).map((u) => (
                             <button
                                 key={u.id}
                                 onClick={() => setSelectedUserId(u.id)}
@@ -122,7 +122,7 @@ export function History() {
                 ) : (
                     sortedLogs.map((log) => {
                         const user = getUser(log.user_id);
-                        if (!user) return null;
+                        if (!user || user.is_hidden) return null;
 
                         return (
                             <div

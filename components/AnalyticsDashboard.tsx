@@ -156,7 +156,7 @@ export function AnalyticsDashboard() {
     };
 
     const userRankings = useMemo(() => {
-        const rankings = users.map(user => {
+        const rankings = users.filter(u => !u.is_hidden).map(user => {
             const score = logs
                 .filter(l => {
                     const monthMatch = selectedMonth === 'all' || l.date.startsWith(selectedMonth);

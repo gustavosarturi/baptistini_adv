@@ -354,7 +354,7 @@ export function RewardsTab() {
                     </div>
 
                     <div className="flex flex-col gap-12">
-                        {users.map(user => {
+                        {users.filter(u => !u.is_hidden).map(user => {
                             const data = calcUserYearData(user.id, currentYear);
                             if (data.finalTotal === 0 && data.totalYearEarned === 0) return null; // Skip users with no points
                             return (

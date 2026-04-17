@@ -2,10 +2,10 @@
 
 import { useGameStore } from "@/lib/store";
 import { UserTier, AuthorizedUser } from "@/lib/types";
-import { ShieldCheck, Medal, Plus, Trash2, Key, UserCheck, Edit2, Check, X } from "lucide-react";
+import { ShieldCheck, Medal, Plus, Trash2, Key, UserCheck, Edit2, Check, X, Eye, EyeOff } from "lucide-react";
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
-import { collection, query, getDocs, setDoc, doc, deleteDoc, orderBy } from "firebase/firestore";
+import { collection, query, getDocs, setDoc, updateDoc, doc, deleteDoc, orderBy } from "firebase/firestore";
 
 export function AdminPanel() {
     const { users, setTier, setDepartment } = useGameStore();
@@ -212,6 +212,24 @@ export function AdminPanel() {
                                             <option value="Gold">Gold</option>
                                             <option value="Diamond">Diamond</option>
                                         </select>
+                                    </div>
+                                    <div className="flex flex-col gap-1 w-[80px]">
+                                        <label className="text-[8px] font-bold text-zinc-600 uppercase mb-1 ml-1 text-center">Visibilidade</label>
+                                        <button
+                                            onClick={async () => {
+                                                if (!db) return;
+                                                const newState = !user.is_hidden;
+                                                try {
+                                                    await updateDoc(doc(db, "users_profiles", user.id), { is_hidden: newState });
+                                                } catch (err) {
+                                                    console.error("Error hiding user:", err);
+                                                }
+                                            }}
+                                            className={`h-[34px] rounded-lg flex items-center justify-center transition-all ${user.is_hidden ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20' : 'bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/20'}`}
+                                            title={user.is_hidden ? "Usuário Oculto (clique para mostrar)" : "Usuário Visível (clique para ocultar)"}
+                                        >
+                                            {user.is_hidden ? <EyeOff size={16} /> : <Eye size={16} />}
+                                        </button>
                                     </div>
                                 </div>
                             </div>
