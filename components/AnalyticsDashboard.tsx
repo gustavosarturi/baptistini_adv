@@ -66,7 +66,7 @@ export function AnalyticsDashboard() {
         }
 
         return list;
-    }, [logs, selectedMonth, selectedUserId, selectedActivity, selectedDepartment]);
+    }, [logs, selectedMonth, selectedUserId, selectedActivity, selectedDepartment, hideBaptistini]);
 
     // 1. Top Clientes
     const clientStats = useMemo(() => {
@@ -143,7 +143,7 @@ export function AnalyticsDashboard() {
         return Object.entries(stats)
             .sort((a, b) => a[0].localeCompare(b[0]))
             .slice(-6); // Últimos 6 meses
-    }, [logs, selectedUserId, selectedActivity, selectedDepartment]);
+    }, [logs, selectedUserId, selectedActivity, selectedDepartment, hideBaptistini]);
 
     const totalMinutes = useMemo(() => {
         return filteredLogs.reduce((acc, log) => acc + log.time_spent, 0);
@@ -169,7 +169,7 @@ export function AnalyticsDashboard() {
             return { user, score };
         });
         return rankings.sort((a, b) => b.score - a.score);
-    }, [logs, selectedMonth, users, selectedActivity, selectedDepartment]);
+    }, [logs, selectedMonth, users, selectedActivity, selectedDepartment, hideBaptistini]);
 
     const maxClientValue = Math.max(...clientStats.map(c => clientSortBy === 'count' ? c.count : c.time), 1);
     const maxActivityFreq = Math.max(...activityStats.sortedByFrequency.map(s => s[1].count), 1);
