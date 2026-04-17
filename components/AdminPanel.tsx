@@ -5,7 +5,7 @@ import { UserTier, AuthorizedUser } from "@/lib/types";
 import { ShieldCheck, Medal, Plus, Trash2, Key, UserCheck, Edit2, Check, X, Eye, EyeOff } from "lucide-react";
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
-import { collection, query, getDocs, setDoc, updateDoc, doc, deleteDoc, orderBy } from "firebase/firestore";
+import { collection, query, getDocs, setDoc, doc, deleteDoc, orderBy } from "firebase/firestore";
 
 export function AdminPanel() {
     const { users, setTier, setDepartment } = useGameStore();

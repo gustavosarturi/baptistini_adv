@@ -191,7 +191,10 @@ export function RewardsTab() {
                                     <tr key={log.id} className="border-b border-zinc-800/50 hover:bg-zinc-900/40">
                                         <td className="px-4 py-3 font-medium text-white flex items-center gap-2">
                                             {reqUser?.avatar_url ? (
-                                                <img src={reqUser.avatar_url} alt="" className="w-6 h-6 rounded-full border border-zinc-700" />
+                                                <>
+                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                    <img src={reqUser.avatar_url} alt="" className="w-6 h-6 rounded-full border border-zinc-700" />
+                                                </>
                                             ) : (
                                                 <div className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-400">
                                                     {reqUser?.full_name.charAt(0).toUpperCase()}
