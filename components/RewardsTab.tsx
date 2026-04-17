@@ -120,6 +120,14 @@ export function RewardsTab() {
 
     const pendingAdminConfigs = isAdmin ? logs.filter(l => l.type === 'redemption' && l.status === 'pending') : [];
 
+    const globalExtractLogs = logs.filter(log => {
+        if (log.type !== 'redemption') return false;
+        if (log.status === 'rejected') return false;
+        const isHiddenUser = users.find(u => u.id === log.user_id)?.is_hidden;
+        if (isHiddenUser && !isAdmin) return false;
+        return true;
+    }).sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime());
+
 
     // Helper to calc for a specific user and year
     const calcUserYearData = (userId: string, year: number) => {
@@ -413,12 +421,10 @@ export function RewardsTab() {
                     Extrato de <span className="text-primary">Resgates</span>
                 </h2>
                 <div className="space-y-3">
-                    {logs.filter(log => log.type === 'redemption' && log.status !== 'rejected' && !users.find(u => u.id === log.user_id)?.is_hidden).length === 0 ? (
+                    {globalExtractLogs.length === 0 ? (
                         <p className="text-zinc-500 italic text-sm text-center py-8">Nenhum resgate efetuado ainda.</p>
                     ) : (
-                        logs.filter(log => log.type === 'redemption' && log.status !== 'rejected' && !users.find(u => u.id === log.user_id)?.is_hidden)
-                        .sort((a,b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime())
-                        .map(log => {
+                        globalExtractLogs.map(log => {
                             const user = users.find(u => u.id === log.user_id);
                             const isPending = log.status === 'pending';
                             return (
