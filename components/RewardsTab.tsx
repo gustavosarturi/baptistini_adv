@@ -436,7 +436,7 @@ export function RewardsTab() {
                                         <div className="flex items-center gap-2 flex-shrink-0">
                                             {/* eslint-disable-next-line @next/next/no-img-element */}
                                             <img src={user?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.full_name || 'User')}`} className="w-6 h-6 rounded-full border border-zinc-700" alt="" />
-                                            <span className="text-white font-bold uppercase">{user?.full_name || log.user_id.split('@')[0]}</span>
+                                            <span className="text-white font-bold uppercase">{user?.full_name || log.user_id?.split('@')[0] || 'Desconhecido'}</span>
                                         </div>
                                         <div className="text-zinc-400 flex-1 sm:ml-2">
                                             {isPending ? 'solicitou' : 'resgatou'} <span className={`${isPending ? 'text-yellow-500' : 'text-primary'} font-bold`}>{log.description}</span>
