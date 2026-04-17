@@ -3,7 +3,7 @@
 import { useGameStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth-context";
 import { useState } from "react";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, updateDoc, doc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Gift, Wallet, CheckCircle2, Clock } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from "recharts";
@@ -69,6 +69,11 @@ export function RewardsTab() {
                 created_at: new Date().toISOString()
             });
 
+            // Torna a recompensa única removendo-a do banco para ninguém mais solicitar
+            const updatedRewards = availableRewards.filter(r => r.id !== selectedRewardId);
+            const rewardsObj = Object.fromEntries(updatedRewards.map(r => [r.id, r]));
+            await setDoc(doc(db, "settings", "rewards"), rewardsObj);
+
             setSelectedRewardId("");
             setIsRequesting(false);
             setIsSuccess(true);
@@ -78,6 +83,42 @@ export function RewardsTab() {
             alert("Erro ao solicitar resgate.");
         }
     };
+
+    const handleApprove = async (logId: string) => {
+        if (!db) return;
+        try {
+            await updateDoc(doc(db, "activity_logs", logId), { status: 'approved' });
+        } catch (err) {
+            console.error("Erro ao aprovar:", err);
+            alert("Erro ao aprovar o resgate.");
+        }
+    };
+
+    const handleReject = async (logId: string) => {
+        if (!db) return;
+        try {
+            // Se for rejeitado, devolvemos a recompensa para a vitrine
+            const logToReject = logs.find(l => l.id === logId);
+            if (logToReject) {
+                const restoredReward = {
+                    id: Math.random().toString(36).substr(2, 9),
+                    name: logToReject.description,
+                    cost: Math.abs(logToReject.final_points)
+                };
+                
+                const newRewardsList = [...availableRewards, restoredReward];
+                const rewardsObj = Object.fromEntries(newRewardsList.map(r => [r.id, r]));
+                await setDoc(doc(db, "settings", "rewards"), rewardsObj);
+            }
+
+            await updateDoc(doc(db, "activity_logs", logId), { status: 'rejected' });
+        } catch (err) {
+            console.error("Erro ao rejeitar:", err);
+            alert("Erro ao rejeitar o resgate.");
+        }
+    };
+
+    const pendingAdminConfigs = isAdmin ? logs.filter(l => l.type === 'redemption' && l.status === 'pending') : [];
 
 
     // Helper to calc for a specific user and year
@@ -90,7 +131,7 @@ export function RewardsTab() {
         const monthlyData = months.map((m, i) => {
             const mLogs = userLogs.filter(log => log.date.startsWith(`${year}-${m}`));
             const pontuacao = mLogs.filter(l => l.type !== 'redemption').reduce((acc, l) => acc + l.final_points, 0);
-            const resgates = mLogs.filter(l => l.type === 'redemption').reduce((acc, l) => acc + l.final_points, 0);
+            const resgates = mLogs.filter(l => l.type === 'redemption' && l.status === 'approved').reduce((acc, l) => acc + l.final_points, 0);
             
             totalYearEarned += pontuacao;
             totalYearRedeemed += resgates;
@@ -114,6 +155,54 @@ export function RewardsTab() {
                 <div className="bg-green-500/20 border border-green-500 text-green-400 p-4 rounded-xl flex items-center justify-center gap-2">
                     <CheckCircle2 size={20} />
                     Solicitação de resgate enviada com sucesso! Aguardando aprovação do Admin.
+                </div>
+            )}
+
+            {isAdmin && pendingAdminConfigs.length > 0 && (
+                <div className="w-full bg-secondary border border-yellow-500/30 rounded-2xl p-6 shadow-[0_0_30px_rgba(255,215,0,0.05)] overflow-x-auto relative mt-2">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-3xl" />
+                    <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                        <Clock className="text-yellow-500" />
+                        Visão de Administrador: Aprovação de Resgates Pendentes
+                        <span className="p-1 px-2 text-xs bg-yellow-500/20 text-yellow-500 rounded-lg">{pendingAdminConfigs.length} aguardando</span>
+                    </h2>
+                    <table className="w-full text-sm text-left">
+                        <thead className="text-[10px] text-zinc-500 uppercase bg-black/40 border-b border-zinc-800">
+                            <tr>
+                                <th className="px-4 py-3 rounded-tl-lg">Usuário</th>
+                                <th className="px-4 py-3">Data Solicitação</th>
+                                <th className="px-4 py-3">Recompensa</th>
+                                <th className="px-4 py-3">Pontos</th>
+                                <th className="px-4 py-3 text-right rounded-tr-lg">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody className="text-zinc-300">
+                            {pendingAdminConfigs.map(log => {
+                                const reqUser = users.find(u => u.id === log.user_id);
+                                return (
+                                    <tr key={log.id} className="border-b border-zinc-800/50 hover:bg-zinc-900/40">
+                                        <td className="px-4 py-3 font-medium text-white flex items-center gap-2">
+                                            {reqUser?.avatar_url ? (
+                                                <img src={reqUser.avatar_url} alt="" className="w-6 h-6 rounded-full border border-zinc-700" />
+                                            ) : (
+                                                <div className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-400">
+                                                    {reqUser?.full_name.charAt(0).toUpperCase()}
+                                                </div>
+                                            )}
+                                            {reqUser?.full_name || 'Desconhecido'}
+                                        </td>
+                                        <td className="px-4 py-3 text-xs text-zinc-400">{new Date(log.date).toLocaleDateString('pt-BR')}</td>
+                                        <td className="px-4 py-3 font-medium">{log.description}</td>
+                                        <td className="px-4 py-3 font-bold text-yellow-500">{Math.abs(log.final_points)} pts</td>
+                                        <td className="px-4 py-3 text-right flex justify-end gap-2">
+                                            <button onClick={() => handleReject(log.id)} className="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 text-xs font-bold hover:bg-red-500/20 transition-all">Rejeitar</button>
+                                            <button onClick={() => handleApprove(log.id)} className="px-3 py-1.5 rounded-lg bg-yellow-500/10 text-yellow-500 text-xs font-bold hover:bg-yellow-500/20 transition-all border border-yellow-500/20">Aprovar</button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
                 </div>
             )}
 
@@ -258,7 +347,8 @@ export function RewardsTab() {
             )}
 
             {isAdmin && (
-                <div className="w-full bg-secondary border border-zinc-800 rounded-2xl p-6 shadow-xl overflow-x-auto">
+                <div className="flex flex-col gap-8">
+                    <div className="w-full bg-secondary border border-zinc-800 rounded-2xl p-6 shadow-xl overflow-x-auto">
                     <div className="flex justify-between items-center mb-6">
                         <h2 className="text-xl font-bold text-white">Relatório Admin de Recompensas ({currentYear})</h2>
                     </div>
@@ -313,6 +403,7 @@ export function RewardsTab() {
                             )
                         })}
                     </div>
+                </div>
                 </div>
             )}
         </div>
