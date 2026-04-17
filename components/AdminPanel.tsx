@@ -145,9 +145,9 @@ export function AdminPanel() {
 
             {activeSubTab === 'tiers' && (
                 <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-4">
                         {users.map((user) => (
-                            <div key={user.id} className="bg-secondary border border-zinc-800 p-6 rounded-2xl flex items-center justify-between group hover:border-zinc-700 transition-all">
+                            <div key={user.id} className="bg-secondary border border-zinc-800 p-6 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 group hover:border-zinc-700 transition-all">
                                 <div className="flex items-center gap-4">
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img src={user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name || 'User')}&background=27272a&color=fff`} referrerPolicy="no-referrer" className="w-12 h-12 rounded-full border-2 border-zinc-800 group-hover:border-primary/50 transition-all" alt="" />
@@ -166,8 +166,8 @@ export function AdminPanel() {
                                     </div>
                                 </div>
 
-                                <div className="flex flex-col sm:flex-row items-center gap-3">
-                                    <div className="flex flex-col gap-1">
+                                <div className="flex flex-wrap items-end gap-3 sm:gap-4 w-full sm:w-auto">
+                                    <div className="flex flex-col gap-1 w-full sm:w-[130px]">
                                         <label className="text-[8px] font-bold text-zinc-600 uppercase mb-1 ml-1">Depto</label>
                                         <select
                                             value={user.department || ""}
@@ -191,7 +191,7 @@ export function AdminPanel() {
                                             <option value="Marketing">Marketing</option>
                                         </select>
                                     </div>
-                                    <div className="flex flex-col gap-1 w-full sm:w-auto">
+                                    <div className="flex flex-col gap-1 w-full sm:w-[130px]">
                                         <label className="text-[8px] font-bold text-zinc-600 uppercase mb-1 ml-1">Alterar Tier</label>
                                         <select
                                             value={user.tier}
