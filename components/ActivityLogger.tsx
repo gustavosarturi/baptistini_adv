@@ -455,7 +455,7 @@ export function ActivityLogger() {
                                     required
                                     value={formData.date}
                                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                                    className="bg-transparent border-none text-xs font-black text-zinc-300 outline-none cursor-pointer flex-1 text-right [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]"
+                                    className="bg-zinc-800/50 border border-zinc-700 hover:border-primary transition-colors text-xs font-black text-zinc-300 outline-none cursor-pointer px-2 py-1 rounded ml-2 flex-1 text-right [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]"
                                 />
                             ) : (
                                 <span className="text-xs font-black px-2 text-zinc-300">

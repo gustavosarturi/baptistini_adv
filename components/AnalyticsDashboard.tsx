@@ -234,7 +234,7 @@ export function AnalyticsDashboard() {
                                         onClick={() => setSelectedClient(null)}
                                         className="text-orange-400 hover:underline cursor-pointer flex items-center gap-1 bg-orange-400/10 px-2 py-0.5 rounded"
                                     >
-                                        CLIENTE: {selectedClient} (X)
+                                        EMPRESA: {selectedClient} (X)
                                     </button>
                                 )}
                             </div>
@@ -254,7 +254,7 @@ export function AnalyticsDashboard() {
                             </label>
                         </div>
                         <div className="flex flex-col gap-2 w-32">
-                            <label className="text-[10px] font-bold text-zinc-500 uppercase ml-1">Cliente</label>
+                            <label className="text-[10px] font-bold text-zinc-500 uppercase ml-1">Empresa</label>
                             <select
                                 value={selectedClient || ""}
                                 onChange={(e) => setSelectedClient(e.target.value || null)}
@@ -497,7 +497,7 @@ export function AnalyticsDashboard() {
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
                         <div className="flex items-center gap-3">
                             <Users className="text-primary" size={20} />
-                            <h3 className="text-lg font-black text-white uppercase tracking-tight">Top Clientes</h3>
+                            <h3 className="text-lg font-black text-white uppercase tracking-tight">Top Empresas</h3>
                         </div>
 
                         <div className="flex items-center gap-2 bg-black/40 p-1 rounded-lg border border-zinc-800">
