@@ -449,9 +449,19 @@ export function ActivityLogger() {
                         {/* Date Indicator */}
                         <div className="bg-black/30 border border-zinc-800 rounded-lg p-2 flex items-center justify-between h-[34px]">
                             <span className="text-[10px] font-bold text-zinc-500 uppercase px-1">Data</span>
-                            <span className="text-xs font-black px-2 text-zinc-300">
-                                {new Date(formData.date + 'T12:00:00').toLocaleDateString('pt-BR')}
-                            </span>
+                            {role === 'admin' ? (
+                                <input 
+                                    type="date"
+                                    required
+                                    value={formData.date}
+                                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                                    className="bg-transparent border-none text-xs font-black text-zinc-300 outline-none cursor-pointer flex-1 text-right [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]"
+                                />
+                            ) : (
+                                <span className="text-xs font-black px-2 text-zinc-300">
+                                    {new Date(formData.date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                                </span>
+                            )}
                         </div>
 
                         {/* Tier Indicator */}

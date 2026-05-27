@@ -6,11 +6,12 @@ import { useMemo, useState, useRef, useEffect } from "react";
 import { MonthSelector } from "./MonthSelector";
 
 export function AnalyticsDashboard() {
-    const { logs, users, selectedMonth, extraSettings } = useGameStore();
+    const { logs, users, selectedMonth, extraSettings, clients } = useGameStore();
     const [clientSortBy, setClientSortBy] = useState<'count' | 'time'>('count');
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
     const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
     const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
+    const [selectedClient, setSelectedClient] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [hideBaptistini, setHideBaptistini] = useState(true);
@@ -44,7 +45,7 @@ export function AnalyticsDashboard() {
     const filteredLogs = useMemo(() => {
         let list = logs;
 
-        if (hideBaptistini) {
+        if (hideBaptistini && !selectedClient?.toLowerCase().includes('baptistini')) {
             list = list.filter(l => !l.client_name?.toLowerCase().includes('baptistini'));
         }
 
@@ -65,8 +66,12 @@ export function AnalyticsDashboard() {
             list = list.filter(l => l.department === selectedDepartment);
         }
 
+        if (selectedClient) {
+            list = list.filter(l => l.client_name === selectedClient);
+        }
+
         return list;
-    }, [logs, selectedMonth, selectedUserId, selectedActivity, selectedDepartment, hideBaptistini]);
+    }, [logs, selectedMonth, selectedUserId, selectedActivity, selectedDepartment, hideBaptistini, selectedClient]);
 
     // 1. Top Clientes
     const clientStats = useMemo(() => {
@@ -130,10 +135,11 @@ export function AnalyticsDashboard() {
 
         // Filtramos apenas por usuário e atividade para o gráfico histórico
         let historyLogs = logs;
-        if (hideBaptistini) historyLogs = historyLogs.filter(l => !l.client_name?.toLowerCase().includes('baptistini'));
+        if (hideBaptistini && !selectedClient?.toLowerCase().includes('baptistini')) historyLogs = historyLogs.filter(l => !l.client_name?.toLowerCase().includes('baptistini'));
         if (selectedUserId) historyLogs = historyLogs.filter(l => l.user_id === selectedUserId);
         if (selectedActivity) historyLogs = historyLogs.filter(l => l.extra_type === selectedActivity);
         if (selectedDepartment) historyLogs = historyLogs.filter(l => l.department === selectedDepartment);
+        if (selectedClient) historyLogs = historyLogs.filter(l => l.client_name === selectedClient);
 
         historyLogs.forEach(log => {
             const month = log.date.slice(0, 7);
@@ -143,7 +149,7 @@ export function AnalyticsDashboard() {
         return Object.entries(stats)
             .sort((a, b) => a[0].localeCompare(b[0]))
             .slice(-6); // Últimos 6 meses
-    }, [logs, selectedUserId, selectedActivity, selectedDepartment, hideBaptistini]);
+    }, [logs, selectedUserId, selectedActivity, selectedDepartment, hideBaptistini, selectedClient]);
 
     const totalMinutes = useMemo(() => {
         return filteredLogs.reduce((acc, log) => acc + log.time_spent, 0);
@@ -162,14 +168,15 @@ export function AnalyticsDashboard() {
                     const monthMatch = selectedMonth === 'all' || l.date.startsWith(selectedMonth);
                     const activityMatch = !selectedActivity || l.extra_type === selectedActivity;
                     const deptMatch = !selectedDepartment || l.department === selectedDepartment;
-                    const baptMatch = hideBaptistini ? !l.client_name?.toLowerCase().includes('baptistini') : true;
-                    return monthMatch && l.user_id === user.id && activityMatch && deptMatch && baptMatch;
+                    const baptMatch = (hideBaptistini && !selectedClient?.toLowerCase().includes('baptistini')) ? !l.client_name?.toLowerCase().includes('baptistini') : true;
+                    const clientMatch = !selectedClient || l.client_name === selectedClient;
+                    return monthMatch && l.user_id === user.id && activityMatch && deptMatch && baptMatch && clientMatch;
                 })
                 .reduce((acc, l) => acc + l.final_points, 0);
             return { user, score };
         });
         return rankings.sort((a, b) => b.score - a.score);
-    }, [logs, selectedMonth, users, selectedActivity, selectedDepartment, hideBaptistini]);
+    }, [logs, selectedMonth, users, selectedActivity, selectedDepartment, hideBaptistini, selectedClient]);
 
     const maxClientValue = Math.max(...clientStats.map(c => clientSortBy === 'count' ? c.count : c.time), 1);
     const maxActivityFreq = Math.max(...activityStats.sortedByFrequency.map(s => s[1].count), 1);
@@ -221,6 +228,15 @@ export function AnalyticsDashboard() {
                                         DEPTO: {selectedDepartment} (X)
                                     </button>
                                 )}
+
+                                {selectedClient && (
+                                    <button
+                                        onClick={() => setSelectedClient(null)}
+                                        className="text-orange-400 hover:underline cursor-pointer flex items-center gap-1 bg-orange-400/10 px-2 py-0.5 rounded"
+                                    >
+                                        CLIENTE: {selectedClient} (X)
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -236,6 +252,19 @@ export function AnalyticsDashboard() {
                                 />
                                 <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">Incluir Baptistini</span>
                             </label>
+                        </div>
+                        <div className="flex flex-col gap-2 w-32">
+                            <label className="text-[10px] font-bold text-zinc-500 uppercase ml-1">Cliente</label>
+                            <select
+                                value={selectedClient || ""}
+                                onChange={(e) => setSelectedClient(e.target.value || null)}
+                                className="bg-black/50 border border-zinc-700 rounded-lg px-3 py-2 text-white text-xs focus:border-primary outline-none cursor-pointer transition-all"
+                            >
+                                <option value="">Todos</option>
+                                {[...clients].sort((a, b) => a.name.localeCompare(b.name)).map(c => (
+                                    <option key={c.id} value={c.name}>{c.name}</option>
+                                ))}
+                            </select>
                         </div>
                         <div className="flex flex-col gap-2">
                             <label className="text-[10px] font-bold text-zinc-500 uppercase ml-1">Depto</label>
@@ -395,25 +424,67 @@ export function AnalyticsDashboard() {
                         </div>
                     </div>
 
-                    <div className="h-[200px] flex items-end gap-2 sm:gap-4 px-2">
-                        {monthlyHoursStats.length > 0 ? monthlyHoursStats.map(([month, minutes]) => (
-                            <div key={month} className="flex-1 flex flex-col items-center gap-4 group">
-                                <div className="w-full relative flex flex-col items-center">
-                                    <div className="absolute -top-8 opacity-0 group-hover:opacity-100 transition-opacity bg-zinc-800 text-[10px] font-bold text-white px-2 py-1 rounded pointer-events-none z-10 whitespace-nowrap">
-                                        {formatTime(minutes)}
-                                    </div>
-                                    <div
-                                        className="w-full bg-gradient-to-t from-zinc-800 to-primary/80 rounded-t-lg group-hover:to-primary transition-all duration-700 ease-out relative"
-                                        style={{ height: `${(minutes / maxMonthlyHours) * 160 + 10}px` }}
-                                    >
-                                        <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    </div>
+                    <div className="h-[240px] px-4">
+                        {monthlyHoursStats.length > 0 ? (
+                            <div className="relative w-full h-full pt-6 pb-8">
+                                {/* Linhas Guia */}
+                                <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20 py-8">
+                                    <div className="w-full h-px bg-zinc-700" />
+                                    <div className="w-full h-px bg-zinc-700" />
+                                    <div className="w-full h-px bg-zinc-700" />
                                 </div>
-                                <div className="text-[10px] font-black text-zinc-500 group-hover:text-white transition-colors uppercase">
-                                    {new Date(month + "-02").toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                                
+                                {/* SVG do Gráfico de Linha */}
+                                <div className="absolute inset-x-0 bottom-8 top-6">
+                                    <svg className="w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                        <defs>
+                                            <linearGradient id="line-gradient" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stopColor="#ffe500" stopOpacity="0.4" />
+                                                <stop offset="100%" stopColor="#ffe500" stopOpacity="0" />
+                                            </linearGradient>
+                                        </defs>
+                                        {(() => {
+                                            const points = monthlyHoursStats.map(([, minutes], i) => {
+                                                const x = (i / (Math.max(monthlyHoursStats.length - 1, 1))) * 100;
+                                                const y = 100 - ((minutes / maxMonthlyHours) * 100);
+                                                return `${x},${y}`;
+                                            }).join(" ");
+                                            
+                                            const polygonPoints = `0,100 ${points} 100,100`;
+
+                                            return (
+                                                <>
+                                                    <polygon points={polygonPoints} fill="url(#line-gradient)" />
+                                                    <polyline points={points} fill="none" stroke="#ffe500" strokeWidth="3" vectorEffect="non-scaling-stroke" className="drop-shadow-[0_0_8px_rgba(255,229,0,0.5)]" strokeLinejoin="round" />
+                                                </>
+                                            );
+                                        })()}
+                                    </svg>
+                                </div>
+                                
+                                {/* Pontos Interativos e Rótulos */}
+                                <div className="absolute inset-x-0 bottom-8 top-6 flex items-end justify-between z-10">
+                                    {monthlyHoursStats.map(([month, minutes]) => {
+                                        const yPercent = (minutes / maxMonthlyHours) * 100;
+                                        return (
+                                            <div key={month} className="relative h-full flex flex-col items-center w-0 group">
+                                                <div 
+                                                    className="absolute w-3 h-3 sm:w-4 sm:h-4 bg-zinc-900 border-2 border-primary rounded-full cursor-pointer hover:scale-150 hover:bg-primary transition-all shadow-[0_0_10px_rgba(255,229,0,0.3)] z-20 -ml-1.5 sm:-ml-2"
+                                                    style={{ bottom: `calc(${yPercent}% - 6px)` }}
+                                                >
+                                                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-zinc-800 text-[10px] font-bold text-white px-2 py-1 rounded pointer-events-none whitespace-nowrap">
+                                                        {formatTime(minutes)}
+                                                    </div>
+                                                </div>
+                                                <div className="text-[10px] font-black text-zinc-500 group-hover:text-white transition-colors uppercase absolute -bottom-6 sm:-bottom-8 whitespace-nowrap">
+                                                    {new Date(month + "-02").toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
-                        )) : (
+                        ) : (
                             <div className="w-full h-full flex items-center justify-center text-zinc-600 italic uppercase text-xs">
                                 Sem dados históricos suficientes
                             </div>
