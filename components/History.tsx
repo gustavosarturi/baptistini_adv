@@ -6,7 +6,7 @@ import { MonthSelector } from "./MonthSelector";
 import { useState, useMemo } from "react";
 import { doc, deleteDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Clock, Briefcase, Activity, Trash2, Filter, Edit2, Building2, X, Save, Calendar, Award, Users } from "lucide-react";
+import { Clock, Briefcase, Activity, Trash2, Edit2, Building2, X, Save, Calendar, Award, Users } from "lucide-react";
 import { ActivityLog } from "@/lib/types";
 
 function formatDuration(minutes: number) {
