@@ -220,16 +220,11 @@ export function History() {
                                 {/* Date Badge */}
                                 <div className="flex flex-col items-center justify-center bg-black/40 border border-zinc-800 rounded-xl p-2 sm:p-3 w-[65px] sm:w-[70px] flex-shrink-0 self-start sm:self-center">
                                     <span className="text-[10px] sm:text-xs font-bold text-zinc-500 uppercase leading-none mb-1">
-                                        {new Date(log.created_at || log.date + "T12:00:00").toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                                        {new Date(log.date + "T12:00:00").toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
                                     </span>
                                     <span className="text-xl sm:text-2xl font-black text-white leading-none">
-                                        {new Date(log.created_at || log.date + "T12:00:00").getDate().toString().padStart(2, '0')}
+                                        {new Date(log.date + "T12:00:00").getDate().toString().padStart(2, '0')}
                                     </span>
-                                    {log.created_at && (
-                                        <span className="text-[8px] sm:text-[10px] text-zinc-500 font-mono mt-1.5 leading-none">
-                                            {new Date(log.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                        </span>
-                                    )}
                                 </div>
 
                                 {/* User & Content */}
