@@ -3,10 +3,10 @@
 import { useGameStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth-context";
 import { MonthSelector } from "./MonthSelector";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { doc, deleteDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Clock, Briefcase, Activity, Trash2, Edit2, Building2, X, Save, Calendar, Award, Users } from "lucide-react";
+import { Clock, Briefcase, Activity, Trash2, Edit2, Building2, X, Save, Calendar, Award, Users, Search, ChevronDown } from "lucide-react";
 import { ActivityLog } from "@/lib/types";
 
 function formatDuration(minutes: number) {
@@ -25,6 +25,24 @@ export function History() {
     const [editingLog, setEditingLog] = useState<ActivityLog | null>(null);
 
     const [specificDate, setSpecificDate] = useState<string>("");
+
+    const [clientSearchQuery, setClientSearchQuery] = useState("");
+    const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+    const clientDropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (clientDropdownRef.current && !clientDropdownRef.current.contains(event.target as Node)) {
+                setIsClientDropdownOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const filteredClients = useMemo(() => {
+        return clients.filter(c => c.name.toLowerCase().includes(clientSearchQuery.toLowerCase()));
+    }, [clients, clientSearchQuery]);
 
     // Filter logs for the selected month/date and user
     const filteredLogs = logs.filter(log => {
@@ -205,28 +223,104 @@ export function History() {
                         </div>
                     </div>
 
-                    {/* Client Filter */}
+                    {/* Client Filter (Combobox) */}
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                         <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap min-w-[120px]">
                             <Briefcase size={14} />
                             Empresa:
                         </div>
-                        <div className="flex overflow-x-auto pb-1 sm:pb-0 sm:flex-wrap gap-2 scrollbar-thin scrollbar-thumb-zinc-800 w-full sm:w-auto">
-                            <button
-                                onClick={() => setSelectedClient(null)}
-                                className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${!selectedClient ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' : 'bg-black/40 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-700'}`}
-                            >
-                                TODAS
-                            </button>
-                            {clients.map((c) => (
+                        <div className="relative w-full max-w-sm" ref={clientDropdownRef}>
+                            <div className={`
+                                relative flex items-center gap-3 bg-black/40 border rounded-xl backdrop-blur-xl transition-all duration-300 px-3 py-2
+                                ${isClientDropdownOpen ? 'border-primary shadow-[0_0_15px_rgba(255,229,0,0.1)]' : 'border-zinc-800 hover:border-zinc-700'}
+                            `}>
+                                <Search size={16} className={selectedClient ? 'text-primary' : 'text-zinc-500'} />
+                                
+                                <input
+                                    type="text"
+                                    placeholder="Buscar empresa..."
+                                    className="flex-1 bg-transparent border-none outline-none text-white text-xs font-bold placeholder:text-zinc-600 placeholder:font-medium"
+                                    value={selectedClient || clientSearchQuery}
+                                    onChange={(e) => {
+                                        if (selectedClient) setSelectedClient(null);
+                                        setClientSearchQuery(e.target.value);
+                                        setIsClientDropdownOpen(true);
+                                    }}
+                                    onFocus={() => setIsClientDropdownOpen(true)}
+                                />
+
+                                {(selectedClient || clientSearchQuery) && (
+                                    <button
+                                        onClick={() => {
+                                            setSelectedClient(null);
+                                            setClientSearchQuery("");
+                                            setIsClientDropdownOpen(false);
+                                        }}
+                                        className="p-1 hover:bg-white/10 rounded-lg text-zinc-500 hover:text-white transition-colors"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                )}
+
+                                <div className="w-[1px] h-4 bg-zinc-800 mx-1" />
+
                                 <button
-                                    key={c.id}
-                                    onClick={() => setSelectedClient(c.name)}
-                                    className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${selectedClient === c.name ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' : 'bg-black/40 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-700'}`}
+                                    onClick={() => setIsClientDropdownOpen(!isClientDropdownOpen)}
+                                    className={`p-1 hover:bg-white/10 rounded-lg text-zinc-500 hover:text-white transition-transform duration-300 ${isClientDropdownOpen ? 'rotate-180' : ''}`}
                                 >
-                                    {c.name}
+                                    <ChevronDown size={16} />
                                 </button>
-                            ))}
+                            </div>
+
+                            {/* Dropdown List */}
+                            {isClientDropdownOpen && (
+                                <div className="absolute top-full left-0 right-0 mt-2 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden z-[50] animate-in fade-in slide-in-from-top-2 duration-200">
+                                    <div className="max-h-60 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-zinc-800">
+                                        <button
+                                            onClick={() => {
+                                                setSelectedClient(null);
+                                                setClientSearchQuery("");
+                                                setIsClientDropdownOpen(false);
+                                            }}
+                                            className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors group text-left"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-6 h-6 rounded-md bg-zinc-800 flex items-center justify-center group-hover:bg-primary transition-colors">
+                                                    <Briefcase size={12} className="group-hover:text-black transition-colors text-zinc-500" />
+                                                </div>
+                                                <span className="text-xs font-bold text-zinc-400 group-hover:text-white">Todas as Empresas</span>
+                                            </div>
+                                            {!selectedClient && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                                        </button>
+
+                                        {filteredClients.length > 0 ? (
+                                            filteredClients.map((c) => (
+                                                <button
+                                                    key={c.id}
+                                                    onClick={() => {
+                                                        setSelectedClient(c.name);
+                                                        setClientSearchQuery("");
+                                                        setIsClientDropdownOpen(false);
+                                                    }}
+                                                    className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors group text-left mt-1"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-6 h-6 rounded-md bg-zinc-800 flex items-center justify-center group-hover:bg-zinc-700 transition-colors">
+                                                            <Briefcase size={12} className="text-zinc-500 group-hover:text-white transition-colors" />
+                                                        </div>
+                                                        <span className="text-xs font-bold text-zinc-400 group-hover:text-white truncate max-w-[200px]">{c.name}</span>
+                                                    </div>
+                                                    {selectedClient === c.name && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                                                </button>
+                                            ))
+                                        ) : (
+                                            <div className="px-3 py-6 text-center text-zinc-600 italic text-[10px] uppercase tracking-widest">
+                                                Nenhuma empresa encontrada
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
