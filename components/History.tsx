@@ -3,7 +3,7 @@
 import { useGameStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth-context";
 import { MonthSelector } from "./MonthSelector";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { doc, deleteDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Clock, Briefcase, Activity, Trash2, Filter, Edit2, Building2, X, Save, Calendar, Award } from "lucide-react";
