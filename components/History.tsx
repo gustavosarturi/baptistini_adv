@@ -6,7 +6,7 @@ import { MonthSelector } from "./MonthSelector";
 import { useState, useMemo } from "react";
 import { doc, deleteDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Clock, Briefcase, Activity, Trash2, Filter, Edit2, Building2, X, Save, Calendar, Award } from "lucide-react";
+import { Clock, Briefcase, Activity, Trash2, Filter, Edit2, Building2, X, Save, Calendar, Award, Users } from "lucide-react";
 import { ActivityLog } from "@/lib/types";
 
 function formatDuration(minutes: number) {
@@ -21,6 +21,7 @@ export function History() {
     const { logs, users, selectedMonth, removeLog, clients, extraSettings } = useGameStore();
     const { role } = useAuth();
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+    const [selectedClient, setSelectedClient] = useState<string | null>(null);
     const [editingLog, setEditingLog] = useState<ActivityLog | null>(null);
 
     const [specificDate, setSpecificDate] = useState<string>("");
@@ -29,7 +30,8 @@ export function History() {
     const filteredLogs = logs.filter(log => {
         const dateMatch = specificDate ? log.date === specificDate : (selectedMonth === 'all' || log.date.startsWith(selectedMonth));
         const userMatch = !selectedUserId || log.user_id === selectedUserId;
-        return dateMatch && userMatch;
+        const clientMatch = !selectedClient || log.client_name === selectedClient;
+        return dateMatch && userMatch && clientMatch;
     });
 
     // Sort logs by date and created_at as a tiebreaker
@@ -174,29 +176,58 @@ export function History() {
                     </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-zinc-900/50 border border-zinc-800 rounded-2xl animate-in fade-in slide-in-from-top-2">
-                    <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
-                        <Filter size={14} />
-                        Filtrar por Associado:
-                    </div>
-                    <div className="flex overflow-x-auto pb-1 sm:pb-0 sm:flex-wrap gap-2 scrollbar-thin scrollbar-thumb-zinc-800 w-full sm:w-auto">
-                        <button
-                            onClick={() => setSelectedUserId(null)}
-                            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${!selectedUserId ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' : 'bg-black/40 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-700'}`}
-                        >
-                            TODOS
-                        </button>
-                        {users.filter(u => !u.is_hidden).map((u) => (
+                {/* Filters */}
+                <div className="flex flex-col gap-3 p-4 bg-zinc-900/50 border border-zinc-800 rounded-2xl animate-in fade-in slide-in-from-top-2">
+                    {/* User Filter */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap min-w-[120px]">
+                            <Users size={14} />
+                            Associado:
+                        </div>
+                        <div className="flex overflow-x-auto pb-1 sm:pb-0 sm:flex-wrap gap-2 scrollbar-thin scrollbar-thumb-zinc-800 w-full sm:w-auto">
                             <button
-                                key={u.id}
-                                onClick={() => setSelectedUserId(u.id)}
-                                className={`flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${selectedUserId === u.id ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' : 'bg-black/40 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-700'}`}
+                                onClick={() => setSelectedUserId(null)}
+                                className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${!selectedUserId ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' : 'bg-black/40 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-700'}`}
                             >
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name || 'User')}&background=27272a&color=fff`} referrerPolicy="no-referrer" className="w-4 h-4 rounded-full object-cover" alt="" />
-                                {u.full_name.split(' ')[0]}
+                                TODOS
                             </button>
-                        ))}
+                            {users.filter(u => !u.is_hidden).map((u) => (
+                                <button
+                                    key={u.id}
+                                    onClick={() => setSelectedUserId(u.id)}
+                                    className={`flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${selectedUserId === u.id ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' : 'bg-black/40 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-700'}`}
+                                >
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name || 'User')}&background=27272a&color=fff`} referrerPolicy="no-referrer" className="w-4 h-4 rounded-full object-cover" alt="" />
+                                    {u.full_name.split(' ')[0]}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Client Filter */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap min-w-[120px]">
+                            <Briefcase size={14} />
+                            Empresa:
+                        </div>
+                        <div className="flex overflow-x-auto pb-1 sm:pb-0 sm:flex-wrap gap-2 scrollbar-thin scrollbar-thumb-zinc-800 w-full sm:w-auto">
+                            <button
+                                onClick={() => setSelectedClient(null)}
+                                className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${!selectedClient ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' : 'bg-black/40 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-700'}`}
+                            >
+                                TODAS
+                            </button>
+                            {clients.map((c) => (
+                                <button
+                                    key={c.id}
+                                    onClick={() => setSelectedClient(c.name)}
+                                    className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${selectedClient === c.name ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' : 'bg-black/40 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-700'}`}
+                                >
+                                    {c.name}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>
