@@ -6,7 +6,7 @@ import { MonthSelector } from "./MonthSelector";
 import { useState } from "react";
 import { doc, deleteDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Clock, Briefcase, Activity, Trash2, Filter, Edit2, Building2, X, Save } from "lucide-react";
+import { Clock, Briefcase, Activity, Trash2, Filter, Edit2, Building2, X, Save, Calendar, Award } from "lucide-react";
 import { ActivityLog } from "@/lib/types";
 
 function formatDuration(minutes: number) {
@@ -23,19 +23,53 @@ export function History() {
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
     const [editingLog, setEditingLog] = useState<ActivityLog | null>(null);
 
-    // Filter logs for the selected month and user
+    const [specificDate, setSpecificDate] = useState<string>("");
+
+    // Filter logs for the selected month/date and user
     const filteredLogs = logs.filter(log => {
-        const monthMatch = selectedMonth === 'all' || log.date.startsWith(selectedMonth);
+        const dateMatch = specificDate ? log.date === specificDate : (selectedMonth === 'all' || log.date.startsWith(selectedMonth));
         const userMatch = !selectedUserId || log.user_id === selectedUserId;
-        return monthMatch && userMatch;
+        return dateMatch && userMatch;
     });
 
-    // Sort logs by date (newest first)
-    const sortedLogs = [...filteredLogs].sort((a, b) =>
-        new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
+    // Sort logs by date and created_at as a tiebreaker
+    const sortedLogs = [...filteredLogs].sort((a, b) => {
+        const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+        if (dateDiff === 0 && a.created_at && b.created_at) {
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        }
+        return dateDiff;
+    });
 
     const getUser = (userId: string) => users.find(u => u.id === userId);
+
+    // --- KPIs ---
+    const totalActivities = sortedLogs.length;
+    const totalMinutes = sortedLogs.reduce((acc, log) => acc + log.time_spent, 0);
+
+    const topUserStats = useMemo(() => {
+        const stats: Record<string, { pts: number, acts: number }> = {};
+        sortedLogs.forEach(log => {
+            if (!stats[log.user_id]) stats[log.user_id] = { pts: 0, acts: 0 };
+            stats[log.user_id].pts += log.final_points;
+            stats[log.user_id].acts += 1;
+        });
+        const sorted = Object.entries(stats).sort((a, b) => b[1].pts - a[1].pts);
+        return sorted.length > 0 ? sorted[0] : null;
+    }, [sortedLogs]);
+
+    const topClientStats = useMemo(() => {
+        const stats: Record<string, number> = {};
+        sortedLogs.forEach(log => {
+            if (!log.client_name) return;
+            stats[log.client_name] = (stats[log.client_name] || 0) + 1;
+        });
+        const sorted = Object.entries(stats).sort((a, b) => b[1] - a[1]);
+        return sorted.length > 0 ? sorted[0] : null;
+    }, [sortedLogs]);
+
+    const topUser = topUserStats ? getUser(topUserStats[0]) : null;
+    const topClientName = topClientStats ? topClientStats[0] : null;
 
     const handleDelete = async (logId: string) => {
         if (window.confirm("Tem certeza que deseja excluir este registro?")) {
@@ -58,7 +92,8 @@ export function History() {
                 description: editingLog.description?.trim(),
                 client_name: editingLog.client_name,
                 department: editingLog.department,
-                extra_type: editingLog.extra_type
+                extra_type: editingLog.extra_type,
+                date: editingLog.date
             });
             setEditingLog(null);
         } catch (error) {
@@ -71,7 +106,7 @@ export function History() {
         <div className="w-full max-w-4xl animate-in fade-in slide-in-from-bottom-4 duration-700">
 
             {/* Header & Filter */}
-            <div className="flex flex-col gap-6 mb-8">
+            <div className="flex flex-col gap-6 mb-6">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                         <div className="p-3 bg-zinc-800 rounded-xl">
@@ -81,8 +116,61 @@ export function History() {
                             Histórico de Atividades
                         </h2>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <MonthSelector />
+                    <div className="flex flex-wrap items-center gap-3 justify-center">
+                        <div className="flex items-center gap-2 bg-black/40 border border-zinc-800 rounded-lg px-2 h-[34px]">
+                            <Calendar size={14} className="text-zinc-500" />
+                            <input 
+                                type="date"
+                                value={specificDate}
+                                onChange={(e) => setSpecificDate(e.target.value)}
+                                className="bg-transparent text-xs text-zinc-300 font-bold outline-none [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]"
+                                title="Filtrar por dia exato"
+                            />
+                            {specificDate && (
+                                <button onClick={() => setSpecificDate("")} className="text-zinc-500 hover:text-white">
+                                    <X size={14} />
+                                </button>
+                            )}
+                        </div>
+                        {!specificDate && <MonthSelector />}
+                    </div>
+                </div>
+
+                {/* KPIs / Resumo */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 flex flex-col gap-1">
+                        <div className="flex items-center gap-2 text-zinc-500 mb-1">
+                            <Activity size={14} />
+                            <span className="text-[10px] font-bold uppercase tracking-widest">Entregas</span>
+                        </div>
+                        <span className="text-2xl font-black text-white">{totalActivities}</span>
+                    </div>
+                    <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 flex flex-col gap-1">
+                        <div className="flex items-center gap-2 text-zinc-500 mb-1">
+                            <Clock size={14} />
+                            <span className="text-[10px] font-bold uppercase tracking-widest">Horas</span>
+                        </div>
+                        <span className="text-2xl font-black text-primary">{formatDuration(totalMinutes)}</span>
+                    </div>
+                    <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 flex flex-col gap-1">
+                        <div className="flex items-center gap-2 text-zinc-500 mb-1">
+                            <Award size={14} />
+                            <span className="text-[10px] font-bold uppercase tracking-widest">Destaque</span>
+                        </div>
+                        <span className="text-sm font-black text-white truncate" title={topUser?.full_name || "-"}>
+                            {topUser ? topUser.full_name.split(' ')[0] : "-"}
+                        </span>
+                        {topUserStats && <span className="text-[10px] text-zinc-500 font-bold">{topUserStats[1].pts} pts</span>}
+                    </div>
+                    <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 flex flex-col gap-1">
+                        <div className="flex items-center gap-2 text-zinc-500 mb-1">
+                            <Briefcase size={14} />
+                            <span className="text-[10px] font-bold uppercase tracking-widest">Top Empresa</span>
+                        </div>
+                        <span className="text-sm font-black text-white truncate" title={topClientName || "-"}>
+                            {topClientName || "-"}
+                        </span>
+                        {topClientStats && <span className="text-[10px] text-zinc-500 font-bold">{topClientStats[1]} itens</span>}
                     </div>
                 </div>
 
@@ -257,6 +345,20 @@ export function History() {
                         </div>
 
                         <div className="p-6 space-y-5 overflow-y-auto max-h-[70vh]">
+                            {/* Data */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-zinc-500 uppercase flex items-center gap-1.5">
+                                    <Clock size={12} /> Data da Atividade
+                                </label>
+                                <input
+                                    type="date"
+                                    value={editingLog.date}
+                                    onChange={(e) => setEditingLog({ ...editingLog, date: e.target.value })}
+                                    className="w-full bg-black/50 border border-zinc-800 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none transition-colors [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]"
+                                    required
+                                />
+                            </div>
+
                             {/* Cliente */}
                             <div className="space-y-2">
                                 <label className="text-[10px] font-bold text-zinc-500 uppercase flex items-center gap-1.5">

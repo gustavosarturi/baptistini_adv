@@ -112,7 +112,7 @@ export function ActivityLogger() {
             await addDoc(collection(db, "activity_logs"), {
                 ...dataToSave,
                 department: finalDepartment,
-                date: getLocalDateString(),
+                date: formData.date,
                 user_id: targetUser.id,
                 user_name: targetUser.full_name,
                 complexity: selectedItem.type,
