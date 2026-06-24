@@ -184,7 +184,7 @@ export function History() {
                             <Layers size={14} className="text-zinc-500 ml-1" />
                             <select 
                                 value={groupBy} 
-                                onChange={(e) => setGroupBy(e.target.value as any)}
+                                onChange={(e) => setGroupBy(e.target.value as 'none' | 'day' | 'week' | 'month')}
                                 className="bg-transparent text-xs text-zinc-300 font-bold outline-none border-none py-1 px-2 cursor-pointer appearance-none"
                                 title="Agrupar por"
                             >
@@ -380,8 +380,8 @@ export function History() {
                         const isOpen = isGrouped ? !!openGroups[groupName] : true;
                         
                         // Calculate Group KPIs
-                        let groupPointsStats: Record<string, number> = {};
-                        let groupClientStats: Record<string, number> = {};
+                        const groupPointsStats: Record<string, number> = {};
+                        const groupClientStats: Record<string, number> = {};
                         let groupMinutes = 0;
                         
                         if (isGrouped) {

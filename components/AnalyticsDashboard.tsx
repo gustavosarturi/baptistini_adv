@@ -560,7 +560,7 @@ export function AnalyticsDashboard() {
                                     </defs>
                                     {(() => {
                                         // Linha de Horas
-                                        const pointsHours = monthlyEvolutionStats.map(([_, data], i) => {
+                                        const pointsHours = monthlyEvolutionStats.map(([, data], i) => {
                                             const x = (i / (Math.max(monthlyEvolutionStats.length - 1, 1))) * 100;
                                             const y = 100 - ((data.minutes / maxMonthlyHours) * 100);
                                             return `${x},${y}`;
@@ -568,7 +568,7 @@ export function AnalyticsDashboard() {
                                         const polygonHours = `0,100 ${pointsHours} 100,100`;
 
                                         // Linha de Pontos
-                                        const pointsPoints = monthlyEvolutionStats.map(([_, data], i) => {
+                                        const pointsPoints = monthlyEvolutionStats.map(([, data], i) => {
                                             const x = (i / (Math.max(monthlyEvolutionStats.length - 1, 1))) * 100;
                                             const y = 100 - ((data.points / maxMonthlyPoints) * 100);
                                             return `${x},${y}`;
