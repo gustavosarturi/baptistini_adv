@@ -6,7 +6,7 @@ import { MonthSelector } from "./MonthSelector";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { doc, deleteDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Clock, Briefcase, Activity, Trash2, Edit2, Building2, X, Save, Calendar, Award, Users, Search, ChevronDown } from "lucide-react";
+import { Clock, Briefcase, Activity, Trash2, Edit2, Building2, X, Save, Calendar, Award, Users, Search, ChevronDown, ChevronRight, Layers } from "lucide-react";
 import { ActivityLog } from "@/lib/types";
 
 function formatDuration(minutes: number) {
@@ -27,6 +27,8 @@ export function History() {
     const [specificDate, setSpecificDate] = useState<string>("");
 
     const [clientSearchQuery, setClientSearchQuery] = useState("");
+    const [groupBy, setGroupBy] = useState<'none' | 'day' | 'week' | 'month'>('none');
+    const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
     const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
     const clientDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -62,6 +64,31 @@ export function History() {
     });
 
     const getUser = (userId: string) => users.find(u => u.id === userId);
+
+    const toggleGroup = (key: string) => setOpenGroups(prev => ({ ...prev, [key]: !prev[key] }));
+
+    const groupedLogs = useMemo(() => {
+        if (groupBy === 'none') return { "all": sortedLogs };
+        
+        const groups: Record<string, typeof sortedLogs> = {};
+        sortedLogs.forEach(log => {
+            let key = "";
+            const d = new Date(log.date + "T12:00:00");
+            if (groupBy === 'day') {
+                key = d.toLocaleDateString('pt-BR');
+            } else if (groupBy === 'month') {
+                key = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+            } else if (groupBy === 'week') {
+                const day = d.getDay(); 
+                const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+                const monday = new Date(d.setDate(diff));
+                key = `Semana de ${monday.toLocaleDateString('pt-BR')}`;
+            }
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(log);
+        });
+        return groups;
+    }, [sortedLogs, groupBy]);
 
     // --- KPIs ---
     const totalActivities = sortedLogs.length;
@@ -153,6 +180,20 @@ export function History() {
                             )}
                         </div>
                         {!specificDate && <MonthSelector />}
+                        <div className="flex items-center gap-1 bg-black/40 border border-zinc-800 rounded-lg p-1">
+                            <Layers size={14} className="text-zinc-500 ml-1" />
+                            <select 
+                                value={groupBy} 
+                                onChange={(e) => setGroupBy(e.target.value as any)}
+                                className="bg-transparent text-xs text-zinc-300 font-bold outline-none border-none py-1 px-2 cursor-pointer appearance-none"
+                                title="Agrupar por"
+                            >
+                                <option value="none" className="bg-zinc-900">Lista Simples</option>
+                                <option value="day" className="bg-zinc-900">Agrupar Dia</option>
+                                <option value="week" className="bg-zinc-900">Agrupar Semana</option>
+                                <option value="month" className="bg-zinc-900">Agrupar Mês</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
@@ -326,118 +367,185 @@ export function History() {
                 </div>
             </div>
 
+            
             {/* List */}
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-4">
                 {sortedLogs.length === 0 ? (
                     <div className="text-center py-12 bg-secondary border border-zinc-800 rounded-3xl">
-                        <p className="text-zinc-500 italic">Nenhuma atividade registrada em {selectedMonth}.</p>
+                        <p className="text-zinc-500 italic">Nenhuma atividade encontrada.</p>
                     </div>
                 ) : (
-                    sortedLogs.map((log) => {
-                        const user = getUser(log.user_id);
-                        if (!user || user.is_hidden) return null;
+                    Object.entries(groupedLogs).map(([groupName, logsInGroup]) => {
+                        const isGrouped = groupBy !== 'none';
+                        const isOpen = isGrouped ? !!openGroups[groupName] : true;
+                        
+                        // Calculate Group KPIs
+                        let groupPointsStats: Record<string, number> = {};
+                        let groupClientStats: Record<string, number> = {};
+                        let groupMinutes = 0;
+                        
+                        if (isGrouped) {
+                            logsInGroup.forEach(log => {
+                                groupPointsStats[log.user_id] = (groupPointsStats[log.user_id] || 0) + log.final_points;
+                                if (log.client_name) groupClientStats[log.client_name] = (groupClientStats[log.client_name] || 0) + 1;
+                                groupMinutes += log.time_spent;
+                            });
+                        }
+                        
+                        const topGroupUser = isGrouped ? Object.entries(groupPointsStats).sort((a,b) => b[1]-a[1])[0] : null;
+                        const topGroupClient = isGrouped ? Object.entries(groupClientStats).sort((a,b) => b[1]-a[1])[0] : null;
+                        const groupTopUserProfile = topGroupUser ? getUser(topGroupUser[0]) : null;
 
                         return (
-                            <div
-                                key={log.id}
-                                className="bg-secondary border border-zinc-800/50 hover:border-zinc-700 p-4 sm:p-5 rounded-2xl grid grid-cols-[auto_1fr] sm:grid-cols-[auto_1fr_auto] gap-x-4 gap-y-3 sm:gap-x-5 items-start sm:items-center transition-all hover:bg-zinc-900/80 group relative"
-                            >
-                                {/* Date Badge */}
-                                <div className="flex flex-col items-center justify-center bg-black/40 border border-zinc-800 rounded-xl p-2 sm:p-3 w-[65px] sm:w-[70px] flex-shrink-0 self-start sm:self-center">
-                                    <span className="text-[10px] sm:text-xs font-bold text-zinc-500 uppercase leading-none mb-1">
-                                        {new Date(log.date + "T12:00:00").toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
-                                    </span>
-                                    <span className="text-xl sm:text-2xl font-black text-white leading-none">
-                                        {new Date(log.date + "T12:00:00").getDate().toString().padStart(2, '0')}
-                                    </span>
-                                </div>
-
-                                {/* User & Content */}
-                                <div className="flex flex-col gap-1 w-full min-w-0">
-                                    {/* User Row */}
-                                    <div className="flex items-center gap-2 mb-1">
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img
-                                            src={user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name || 'User')}&background=27272a&color=fff`}
-                                            alt={user.username}
-                                            referrerPolicy="no-referrer"
-                                            className="w-5 h-5 rounded-full object-cover border border-zinc-700"
-                                        />
-                                        <span className="text-xs font-bold text-zinc-400 uppercase tracking-wide">
-                                            {user.full_name}
-                                        </span>
-                                    </div>
-
-                                    {/* Activity Type & Description */}
-                                    <h3 className="text-white text-sm sm:text-base font-bold leading-snug flex flex-wrap items-center gap-2">
-                                        {log.extra_type && (
-                                            <span className="text-primary bg-primary/10 px-2 py-0.5 rounded text-[9px] sm:text-[10px] uppercase tracking-tighter border border-primary/20">
-                                                {log.extra_type}
-                                            </span>
-                                        )}
-                                        {log.description}
-                                        {role === 'admin' && (
-                                            <button 
-                                                onClick={() => setEditingLog(log)}
-                                                className="opacity-0 group-hover:opacity-100 p-1 text-zinc-500 hover:text-primary transition-all ml-1"
-                                                title="Editar registro"
-                                            >
-                                                <Edit2 size={14} />
-                                            </button>
-                                        )}
-                                    </h3>
-
-                                    {/* Meta Data */}
-                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-1 text-[10px] sm:text-xs text-zinc-500 font-mono">
-                                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                                            <Briefcase size={12} />
-                                            <span className="text-zinc-400 max-w-[120px] sm:max-w-none truncate">{log.client_name}</span>
+                            <div key={groupName} className={`flex flex-col gap-2 ${isGrouped ? 'bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-2' : ''}`}>
+                                
+                                {/* Group Header */}
+                                {isGrouped && (
+                                    <button 
+                                        onClick={() => toggleGroup(groupName)}
+                                        className="w-full flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-4 rounded-xl hover:bg-zinc-800/50 transition-colors text-left"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            {isOpen ? <ChevronDown size={20} className="text-primary" /> : <ChevronRight size={20} className="text-zinc-500" />}
+                                            <h3 className="text-lg font-black text-white uppercase tracking-tighter">{groupName}</h3>
                                         </div>
-                                        {log.process_number && (
-                                            <span className="px-1.5 py-0.5 bg-zinc-900 rounded text-[9px] border border-zinc-800 flex-shrink-0">
-                                                {log.process_number}
-                                            </span>
-                                        )}
-                                        {log.department && (
-                                            <div className="flex items-center gap-1.5 sm:border-l border-zinc-800 sm:pl-3 flex-shrink-0 border-l-0 pl-0">
-                                                <Building2 size={12} className="text-purple-400" />
-                                                <span className="text-purple-400/80 uppercase">{log.department}</span>
+                                        
+                                        <div className="flex flex-wrap items-center gap-4 text-xs">
+                                            <div className="flex items-center gap-1.5 bg-black/40 px-2 py-1 rounded-md border border-zinc-800">
+                                                <Activity size={12} className="text-zinc-500" />
+                                                <span className="font-bold text-white">{logsInGroup.length} <span className="text-zinc-500 font-normal">ativ</span></span>
                                             </div>
-                                        )}
-                                        <div className="flex items-center gap-1.5 sm:border-l border-zinc-800 sm:pl-3 flex-shrink-0 border-l-0 pl-0">
-                                            <Clock size={12} className="text-zinc-600" />
-                                            <span>{formatDuration(log.time_spent)}</span>
+                                            <div className="flex items-center gap-1.5 bg-black/40 px-2 py-1 rounded-md border border-zinc-800">
+                                                <Clock size={12} className="text-zinc-500" />
+                                                <span className="font-bold text-primary">{formatDuration(groupMinutes)}</span>
+                                            </div>
+                                            {groupTopUserProfile && (
+                                                <div className="flex items-center gap-1.5 bg-black/40 px-2 py-1 rounded-md border border-zinc-800">
+                                                    <Award size={12} className="text-yellow-500" />
+                                                    <span className="font-bold text-white max-w-[100px] truncate">{groupTopUserProfile.full_name.split(' ')[0]}</span>
+                                                </div>
+                                            )}
+                                            {topGroupClient && (
+                                                <div className="flex items-center gap-1.5 bg-black/40 px-2 py-1 rounded-md border border-zinc-800">
+                                                    <Briefcase size={12} className="text-blue-400" />
+                                                    <span className="font-bold text-white max-w-[100px] truncate">{topGroupClient[0]}</span>
+                                                </div>
+                                            )}
                                         </div>
+                                    </button>
+                                )}
+
+                                {/* Group Content */}
+                                {isOpen && (
+                                    <div className={`flex flex-col gap-3 ${isGrouped ? 'px-2 pb-2 mt-2' : ''}`}>
+                                        {logsInGroup.map(log => {
+                                            const user = getUser(log.user_id);
+                                            if (!user || user.is_hidden) return null;
+
+                                            return (
+                                                <div
+                                                    key={log.id}
+                                                    className="bg-secondary border border-zinc-800/50 hover:border-zinc-700 p-4 sm:p-5 rounded-2xl grid grid-cols-[auto_1fr] sm:grid-cols-[auto_1fr_auto] gap-x-4 gap-y-3 sm:gap-x-5 items-start sm:items-center transition-all hover:bg-zinc-900/80 group relative"
+                                                >
+                                                    {/* Date Badge */}
+                                                    <div className="flex flex-col items-center justify-center bg-black/40 border border-zinc-800 rounded-xl p-2 sm:p-3 w-[65px] sm:w-[70px] flex-shrink-0 self-start sm:self-center">
+                                                        <span className="text-[10px] sm:text-xs font-bold text-zinc-500 uppercase leading-none mb-1">
+                                                            {new Date(log.date + "T12:00:00").toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                                                        </span>
+                                                        <span className="text-xl sm:text-2xl font-black text-white leading-none">
+                                                            {new Date(log.date + "T12:00:00").getDate().toString().padStart(2, '0')}
+                                                        </span>
+                                                    </div>
+
+                                                    {/* User & Content */}
+                                                    <div className="flex flex-col gap-1 w-full min-w-0">
+                                                        {/* User Row */}
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                            <img
+                                                                src={user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name || 'User')}&background=27272a&color=fff`}
+                                                                alt={user.username}
+                                                                referrerPolicy="no-referrer"
+                                                                className="w-5 h-5 rounded-full object-cover border border-zinc-700"
+                                                            />
+                                                            <span className="text-xs font-bold text-zinc-400 uppercase tracking-wide">
+                                                                {user.full_name}
+                                                            </span>
+                                                        </div>
+
+                                                        {/* Activity Type & Description */}
+                                                        <h3 className="text-white text-sm sm:text-base font-bold leading-snug flex flex-wrap items-center gap-2">
+                                                            {log.extra_type && (
+                                                                <span className="text-primary bg-primary/10 px-2 py-0.5 rounded text-[9px] sm:text-[10px] uppercase tracking-tighter border border-primary/20">
+                                                                    {log.extra_type}
+                                                                </span>
+                                                            )}
+                                                            {log.description}
+                                                            {role === 'admin' && (
+                                                                <button 
+                                                                    onClick={() => setEditingLog(log)}
+                                                                    className="opacity-0 group-hover:opacity-100 p-1 text-zinc-500 hover:text-primary transition-all ml-1"
+                                                                    title="Editar registro"
+                                                                >
+                                                                    <Edit2 size={14} />
+                                                                </button>
+                                                            )}
+                                                        </h3>
+
+                                                        {/* Meta Data */}
+                                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-1 text-[10px] sm:text-xs text-zinc-500 font-mono">
+                                                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                                                                <Briefcase size={12} />
+                                                                <span className="text-zinc-400 max-w-[120px] sm:max-w-none truncate">{log.client_name}</span>
+                                                            </div>
+                                                            {log.process_number && (
+                                                                <span className="px-1.5 py-0.5 bg-zinc-900 rounded text-[9px] border border-zinc-800 flex-shrink-0">
+                                                                    {log.process_number}
+                                                                </span>
+                                                            )}
+                                                            {log.department && (
+                                                                <div className="flex items-center gap-1.5 sm:border-l border-zinc-800 sm:pl-3 flex-shrink-0 border-l-0 pl-0">
+                                                                    <Building2 size={12} className="text-purple-400" />
+                                                                    <span className="text-purple-400/80 uppercase">{log.department}</span>
+                                                                </div>
+                                                            )}
+                                                            <div className="flex items-center gap-1.5 sm:border-l border-zinc-800 sm:pl-3 flex-shrink-0 border-l-0 pl-0">
+                                                                <Clock size={12} className="text-zinc-600" />
+                                                                <span>{formatDuration(log.time_spent)}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Score & Delete Badge */}
+                                                    <div className="col-span-2 sm:col-span-1 flex flex-row sm:flex-col items-center gap-4 sm:gap-2 justify-between sm:justify-end sm:text-right border-t sm:border-t-0 sm:border-l border-zinc-800 pt-3 sm:pt-0 sm:pl-5 mt-1 sm:mt-0 relative w-full">
+                                                        {role === 'admin' && (
+                                                            <button
+                                                                onClick={() => handleDelete(log.id)}
+                                                                className="sm:absolute sm:-top-2 sm:-right-2 p-2 rounded-full text-zinc-600 hover:text-red-500 hover:bg-red-500/10 transition-colors opacity-100 sm:opacity-0 group-hover:opacity-100"
+                                                                title="Excluir Registro"
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        )}
+                                                        <div className="flex flex-col items-end">
+                                                            <span className={`text-xs font-bold uppercase py-0.5 px-2 rounded-full mb-1
+                                                                ${log.complexity === 'Hard' ? 'bg-red-500/10 text-red-500 border border-red-500/20' :
+                                                                    log.complexity === 'Medium' ? 'bg-primary/10 text-primary border border-primary/20' :
+                                                                        log.complexity === 'Extra' ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' :
+                                                                            'bg-blue-500/10 text-blue-400 border border-blue-500/20'}
+                                                            `}>
+                                                                {log.complexity === 'Extra' ? 'Incentivo' : log.complexity}
+                                                            </span>
+                                                            <div className="text-xl font-black text-white">
+                                                                {log.final_points > 0 ? '+' : ''}{log.final_points} <span className="text-[10px] text-zinc-600 font-normal">XP</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
-                                </div>
-
-                                {/* Score & Delete Badge */}
-                                <div className="col-span-2 sm:col-span-1 flex flex-row sm:flex-col items-center gap-4 sm:gap-2 justify-between sm:justify-end sm:text-right border-t sm:border-t-0 sm:border-l border-zinc-800 pt-3 sm:pt-0 sm:pl-5 mt-1 sm:mt-0 relative w-full">
-
-                                    {role === 'admin' && (
-                                        <button
-                                            onClick={() => handleDelete(log.id)}
-                                            className="sm:absolute sm:-top-2 sm:-right-2 p-2 rounded-full text-zinc-600 hover:text-red-500 hover:bg-red-500/10 transition-colors opacity-100 sm:opacity-0 group-hover:opacity-100"
-                                            title="Excluir Registro"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    )}
-
-                                    <div className="flex flex-col items-end">
-                                        <span className={`text-xs font-bold uppercase py-0.5 px-2 rounded-full mb-1
-                                            ${log.complexity === 'Hard' ? 'bg-red-500/10 text-red-500 border border-red-500/20' :
-                                                log.complexity === 'Medium' ? 'bg-primary/10 text-primary border border-primary/20' :
-                                                    log.complexity === 'Extra' ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' :
-                                                        'bg-blue-500/10 text-blue-400 border border-blue-500/20'}
-                                        `}>
-                                            {log.complexity === 'Extra' ? 'Incentivo' : log.complexity}
-                                        </span>
-                                        <div className="text-xl font-black text-white">
-                                            {log.final_points > 0 ? '+' : ''}{log.final_points} <span className="text-[10px] text-zinc-600 font-normal">XP</span>
-                                        </div>
-                                    </div>
-                                </div>
+                                )}
                             </div>
                         );
                     })

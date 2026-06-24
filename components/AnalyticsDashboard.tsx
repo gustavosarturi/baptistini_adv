@@ -1,7 +1,7 @@
 "use client";
 
 import { useGameStore } from "@/lib/store";
-import { Clock, TrendingUp, Users, Activity, Award, Filter, Search, X, ChevronDown } from "lucide-react";
+import { Clock, TrendingUp, Users, Activity, Award, Filter, Search, X, ChevronDown, Briefcase } from "lucide-react";
 import { useMemo, useState, useRef, useEffect } from "react";
 import { MonthSelector } from "./MonthSelector";
 
@@ -14,8 +14,11 @@ export function AnalyticsDashboard() {
     const [selectedClient, setSelectedClient] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [clientSearchQuery, setClientSearchQuery] = useState("");
+    const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
     const [hideBaptistini, setHideBaptistini] = useState(true);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const clientDropdownRef = useRef<HTMLDivElement>(null);
 
     // Listar todas as atividades únicas presentes nos logs ou configurações
     const activityOptions = useMemo(() => {
@@ -30,11 +33,21 @@ export function AnalyticsDashboard() {
         );
     }, [activityOptions, searchQuery]);
 
+    const filteredClientsOptions = useMemo(() => {
+        const query = clientSearchQuery.toLowerCase();
+        return [...clients].sort((a,b) => a.name.localeCompare(b.name)).filter(client =>
+            client.name.toLowerCase().includes(query)
+        );
+    }, [clients, clientSearchQuery]);
+
     // Fechar dropdown ao clicar fora
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
                 setIsDropdownOpen(false);
+            }
+            if (clientDropdownRef.current && !clientDropdownRef.current.contains(event.target as Node)) {
+                setIsClientDropdownOpen(false);
             }
         }
         document.addEventListener("mousedown", handleClickOutside);
@@ -130,10 +143,9 @@ export function AnalyticsDashboard() {
     }, [activityStats]);
 
     // 4. Evolução Mensal de Horas (Nova)
-    const monthlyHoursStats = useMemo(() => {
-        const stats: Record<string, number> = {};
+    const monthlyEvolutionStats = useMemo(() => {
+        const stats: Record<string, { minutes: number; points: number }> = {};
 
-        // Filtramos apenas por usuário e atividade para o gráfico histórico
         let historyLogs = logs;
         if (hideBaptistini && !selectedClient?.toLowerCase().includes('baptistini')) historyLogs = historyLogs.filter(l => !l.client_name?.toLowerCase().includes('baptistini'));
         if (selectedUserId) historyLogs = historyLogs.filter(l => l.user_id === selectedUserId);
@@ -143,12 +155,14 @@ export function AnalyticsDashboard() {
 
         historyLogs.forEach(log => {
             const month = log.date.slice(0, 7);
-            stats[month] = (stats[month] || 0) + log.time_spent;
+            if (!stats[month]) stats[month] = { minutes: 0, points: 0 };
+            stats[month].minutes += log.time_spent;
+            stats[month].points += log.final_points;
         });
 
         return Object.entries(stats)
             .sort((a, b) => a[0].localeCompare(b[0]))
-            .slice(-6); // Últimos 6 meses
+            .slice(-6);
     }, [logs, selectedUserId, selectedActivity, selectedDepartment, hideBaptistini, selectedClient]);
 
     const totalMinutes = useMemo(() => {
@@ -180,7 +194,8 @@ export function AnalyticsDashboard() {
 
     const maxClientValue = Math.max(...clientStats.map(c => clientSortBy === 'count' ? c.count : c.time), 1);
     const maxActivityFreq = Math.max(...activityStats.sortedByFrequency.map(s => s[1].count), 1);
-    const maxMonthlyHours = Math.max(...monthlyHoursStats.map(s => s[1]), 1);
+    const maxMonthlyHours = Math.max(...monthlyEvolutionStats.map(s => s[1].minutes), 1);
+    const maxMonthlyPoints = Math.max(...monthlyEvolutionStats.map(s => s[1].points), 1);
     const totalLogs = filteredLogs.length || 1;
 
     const selectedUser = users.find(u => u.id === selectedUserId);
@@ -199,7 +214,10 @@ export function AnalyticsDashboard() {
                         </div>
                         <div>
                             <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic">ANÁLISE DE <span className="text-primary">PERFORMANCE</span></h2>
-                            <div className="flex flex-wrap items-center gap-3 mt-1 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                            <p className="text-xs font-bold text-zinc-400 mt-1 uppercase tracking-widest">
+                                {selectedUserId ? `Performance Individual: ${selectedUser?.full_name}` : 'Resumo Geral da Força Produtiva do Escritório'}
+                            </p>
+                            <div className="flex flex-wrap items-center gap-3 mt-3 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
                                 <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> DADOS ATUALIZADOS</span>
 
                                 {selectedUserId && (
@@ -253,19 +271,7 @@ export function AnalyticsDashboard() {
                                 <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">Incluir Baptistini</span>
                             </label>
                         </div>
-                        <div className="flex flex-col gap-2 w-32">
-                            <label className="text-[10px] font-bold text-zinc-500 uppercase ml-1">Empresa</label>
-                            <select
-                                value={selectedClient || ""}
-                                onChange={(e) => setSelectedClient(e.target.value || null)}
-                                className="bg-black/50 border border-zinc-700 rounded-lg px-3 py-2 text-white text-xs focus:border-primary outline-none cursor-pointer transition-all"
-                            >
-                                <option value="">Todos</option>
-                                {[...clients].sort((a, b) => a.name.localeCompare(b.name)).map(c => (
-                                    <option key={c.id} value={c.name}>{c.name}</option>
-                                ))}
-                            </select>
-                        </div>
+                        
                         <div className="flex flex-col gap-2">
                             <label className="text-[10px] font-bold text-zinc-500 uppercase ml-1">Depto</label>
                             <select
@@ -311,187 +317,371 @@ export function AnalyticsDashboard() {
                 </div>
             </div>
 
-            {/* Filtro por Atividade (Barra de Pesquisa) */}
-            <div className="relative w-full max-w-2xl mx-auto" ref={dropdownRef}>
-                <div className="relative group">
-                    <div className={`absolute inset-0 bg-primary/20 rounded-2xl blur-xl transition-all duration-500 scale-90 ${isDropdownOpen ? 'opacity-100 scale-100' : 'opacity-0'}`} />
+            
+            {/* Filtros de Empresa e Atividade (Lado a Lado) */}
+            <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                {/* Filtro por Empresa */}
+                <div className="relative w-full" ref={clientDropdownRef}>
+                    <div className="relative group">
+                        <div className={`absolute inset-0 bg-orange-500/10 rounded-2xl blur-xl transition-all duration-500 scale-90 ${isClientDropdownOpen ? 'opacity-100 scale-100' : 'opacity-0'}`} />
 
-                    <div className={`
-                        relative flex items-center gap-4 bg-zinc-900/80 border p-4 rounded-2xl backdrop-blur-xl transition-all duration-300
-                        ${isDropdownOpen ? 'border-primary shadow-[0_0_30px_rgba(255,229,0,0.1)]' : 'border-zinc-800 hover:border-zinc-700'}
-                    `}>
-                        <Search size={20} className={selectedActivity ? 'text-primary' : 'text-zinc-500'} />
+                        <div className={`
+                            relative flex items-center gap-4 bg-zinc-900/80 border p-4 rounded-2xl backdrop-blur-xl transition-all duration-300
+                            ${isClientDropdownOpen ? 'border-orange-500 shadow-[0_0_30px_rgba(249,115,22,0.1)]' : 'border-zinc-800 hover:border-zinc-700'}
+                        `}>
+                            <Briefcase size={20} className={selectedClient ? 'text-orange-500' : 'text-zinc-500'} />
 
-                        <input
-                            type="text"
-                            placeholder="Pesquisar atividade..."
-                            className="flex-1 bg-transparent border-none outline-none text-white font-bold placeholder:text-zinc-600 placeholder:font-medium"
-                            value={selectedActivity || searchQuery}
-                            onChange={(e) => {
-                                if (selectedActivity) setSelectedActivity(null);
-                                setSearchQuery(e.target.value);
-                                setIsDropdownOpen(true);
-                            }}
-                            onFocus={() => setIsDropdownOpen(true)}
-                        />
-
-                        {(selectedActivity || searchQuery) && (
-                            <button
-                                onClick={() => {
-                                    setSelectedActivity(null);
-                                    setSearchQuery("");
-                                    setIsDropdownOpen(false);
+                            <input
+                                type="text"
+                                placeholder="Pesquisar empresa..."
+                                className="flex-1 bg-transparent border-none outline-none text-white font-bold placeholder:text-zinc-600 placeholder:font-medium"
+                                value={selectedClient || clientSearchQuery}
+                                onChange={(e) => {
+                                    if (selectedClient) setSelectedClient(null);
+                                    setClientSearchQuery(e.target.value);
+                                    setIsClientDropdownOpen(true);
                                 }}
-                                className="p-1 hover:bg-white/10 rounded-lg text-zinc-500 hover:text-white transition-colors"
+                                onFocus={() => setIsClientDropdownOpen(true)}
+                            />
+
+                            {(selectedClient || clientSearchQuery) && (
+                                <button
+                                    onClick={() => {
+                                        setSelectedClient(null);
+                                        setClientSearchQuery("");
+                                        setIsClientDropdownOpen(false);
+                                    }}
+                                    className="p-1 hover:bg-white/10 rounded-lg text-zinc-500 hover:text-white transition-colors"
+                                >
+                                    <X size={16} />
+                                </button>
+                            )}
+
+                            <div className="w-[1px] h-6 bg-zinc-800 mx-1" />
+
+                            <button
+                                onClick={() => setIsClientDropdownOpen(!isClientDropdownOpen)}
+                                className={`p-1 hover:bg-white/10 rounded-lg text-zinc-500 hover:text-white transition-transform duration-300 ${isClientDropdownOpen ? 'rotate-180' : ''}`}
                             >
-                                <X size={16} />
+                                <ChevronDown size={20} />
                             </button>
+                        </div>
+
+                        {/* Dropdown de Sugestões Empresa */}
+                        {isClientDropdownOpen && (
+                            <div className="absolute top-full left-0 right-0 mt-3 bg-zinc-900 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-4 duration-300">
+                                <div className="max-h-64 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-zinc-800">
+                                    <button
+                                        onClick={() => {
+                                            setSelectedClient(null);
+                                            setClientSearchQuery("");
+                                            setIsClientDropdownOpen(false);
+                                        }}
+                                        className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors group text-left"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center group-hover:bg-orange-500 transition-colors">
+                                                <Filter size={14} className="group-hover:text-black transition-colors" />
+                                            </div>
+                                            <span className="text-sm font-bold text-zinc-400 group-hover:text-white">Todas as Empresas</span>
+                                        </div>
+                                        {!selectedClient && <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />}
+                                    </button>
+
+                                    {filteredClientsOptions.length > 0 ? (
+                                        filteredClientsOptions.map((client) => (
+                                            <button
+                                                key={client.id}
+                                                onClick={() => {
+                                                    setSelectedClient(client.name);
+                                                    setClientSearchQuery("");
+                                                    setIsClientDropdownOpen(false);
+                                                }}
+                                                className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors group text-left"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center group-hover:bg-orange-500 transition-colors">
+                                                        {client.emoji ? <span className="text-base leading-none group-hover:scale-110 transition-transform">{client.emoji}</span> : <Briefcase size={14} className="group-hover:text-black transition-colors" />}
+                                                    </div>
+                                                    <span className="text-sm font-bold text-zinc-300 group-hover:text-white">{client.name}</span>
+                                                </div>
+                                                {selectedClient === client.name && <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />}
+                                            </button>
+                                        ))
+                                    ) : (
+                                        <div className="p-4 text-center text-sm text-zinc-500 italic">Nenhuma empresa encontrada</div>
+                                    )}
+                                </div>
+                            </div>
                         )}
-
-                        <div className="w-[1px] h-6 bg-zinc-800 mx-1" />
-
-                        <button
-                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                            className={`p-1 hover:bg-white/10 rounded-lg text-zinc-500 hover:text-white transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`}
-                        >
-                            <ChevronDown size={20} />
-                        </button>
                     </div>
+                </div>
 
-                    {/* Dropdown de Sugestões */}
-                    {isDropdownOpen && (
-                        <div className="absolute top-full left-0 right-0 mt-3 bg-zinc-900 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-4 duration-300">
-                            <div className="max-h-64 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-zinc-800">
+                {/* Filtro por Atividade */}
+                <div className="relative w-full" ref={dropdownRef}>
+                    <div className="relative group">
+                        <div className={`absolute inset-0 bg-primary/20 rounded-2xl blur-xl transition-all duration-500 scale-90 ${isDropdownOpen ? 'opacity-100 scale-100' : 'opacity-0'}`} />
+
+                        <div className={`
+                            relative flex items-center gap-4 bg-zinc-900/80 border p-4 rounded-2xl backdrop-blur-xl transition-all duration-300
+                            ${isDropdownOpen ? 'border-primary shadow-[0_0_30px_rgba(255,229,0,0.1)]' : 'border-zinc-800 hover:border-zinc-700'}
+                        `}>
+                            <Search size={20} className={selectedActivity ? 'text-primary' : 'text-zinc-500'} />
+
+                            <input
+                                type="text"
+                                placeholder="Pesquisar atividade..."
+                                className="flex-1 bg-transparent border-none outline-none text-white font-bold placeholder:text-zinc-600 placeholder:font-medium"
+                                value={selectedActivity || searchQuery}
+                                onChange={(e) => {
+                                    if (selectedActivity) setSelectedActivity(null);
+                                    setSearchQuery(e.target.value);
+                                    setIsDropdownOpen(true);
+                                }}
+                                onFocus={() => setIsDropdownOpen(true)}
+                            />
+
+                            {(selectedActivity || searchQuery) && (
                                 <button
                                     onClick={() => {
                                         setSelectedActivity(null);
                                         setSearchQuery("");
                                         setIsDropdownOpen(false);
                                     }}
-                                    className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors group text-left"
+                                    className="p-1 hover:bg-white/10 rounded-lg text-zinc-500 hover:text-white transition-colors"
                                 >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center group-hover:bg-primary transition-colors">
-                                            <Filter size={14} className="group-hover:text-black transition-colors" />
-                                        </div>
-                                        <span className="text-sm font-bold text-zinc-400 group-hover:text-white">Todas as Atividades</span>
-                                    </div>
-                                    {!selectedActivity && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                                    <X size={16} />
                                 </button>
+                            )}
 
-                                {filteredOptions.length > 0 ? (
-                                    filteredOptions.map((option) => (
-                                        <button
-                                            key={option}
-                                            onClick={() => {
-                                                setSelectedActivity(option);
-                                                setSearchQuery("");
-                                                setIsDropdownOpen(false);
-                                            }}
-                                            className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors group text-left"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center group-hover:bg-blue-500 transition-colors">
-                                                    <Activity size={14} className="group-hover:text-white transition-colors" />
-                                                </div>
-                                                <span className="text-sm font-bold text-zinc-400 group-hover:text-white">{option}</span>
+                            <div className="w-[1px] h-6 bg-zinc-800 mx-1" />
+
+                            <button
+                                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                className={`p-1 hover:bg-white/10 rounded-lg text-zinc-500 hover:text-white transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`}
+                            >
+                                <ChevronDown size={20} />
+                            </button>
+                        </div>
+
+                        {/* Dropdown de Sugestões Atividade */}
+                        {isDropdownOpen && (
+                            <div className="absolute top-full left-0 right-0 mt-3 bg-zinc-900 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-4 duration-300">
+                                <div className="max-h-64 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-zinc-800">
+                                    <button
+                                        onClick={() => {
+                                            setSelectedActivity(null);
+                                            setSearchQuery("");
+                                            setIsDropdownOpen(false);
+                                        }}
+                                        className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors group text-left"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center group-hover:bg-primary transition-colors">
+                                                <Filter size={14} className="group-hover:text-black transition-colors" />
                                             </div>
-                                            {selectedActivity === option && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
-                                        </button>
-                                    ))
-                                ) : (
-                                    <div className="px-4 py-8 text-center text-zinc-600 italic text-xs uppercase tracking-widest">
-                                        Nenhuma atividade encontrada
-                                    </div>
-                                )}
+                                            <span className="text-sm font-bold text-zinc-400 group-hover:text-white">Todas as Atividades</span>
+                                        </div>
+                                        {!selectedActivity && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                                    </button>
+
+                                    {filteredOptions.length > 0 ? (
+                                        filteredOptions.map((option) => (
+                                            <button
+                                                key={option}
+                                                onClick={() => {
+                                                    setSelectedActivity(option);
+                                                    setSearchQuery("");
+                                                    setIsDropdownOpen(false);
+                                                }}
+                                                className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors group text-left"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center group-hover:bg-blue-500 transition-colors">
+                                                        <Activity size={14} className="group-hover:text-white transition-colors" />
+                                                    </div>
+                                                    <span className="text-sm font-bold text-zinc-300 group-hover:text-white">{option}</span>
+                                                </div>
+                                                {selectedActivity === option && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
+                                            </button>
+                                        ))
+                                    ) : (
+                                        <div className="p-4 text-center text-sm text-zinc-500 italic">Nenhuma atividade encontrada</div>
+                                    )}
+                                </div>
                             </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* A. Evolução Mensal de Horas e Pontos */}
+            <div className="bg-zinc-900/40 border border-zinc-800 rounded-3xl p-8 shadow-xl">
+                <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-3">
+                        <Clock className="text-primary" size={20} />
+                        <h3 className="text-lg font-black text-white uppercase tracking-tight italic">
+                            Evolução de <span className="text-primary">Produtividade</span>
+                        </h3>
+                    </div>
+                    <div className="flex items-center gap-6 text-[10px] font-bold uppercase">
+                        <div className="flex items-center gap-2 text-zinc-400">
+                            <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(255,229,0,0.5)]" /> Horas
+                        </div>
+                        <div className="flex items-center gap-2 text-zinc-400">
+                            <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" /> Pontos (XP)
+                        </div>
+                    </div>
+                </div>
+
+                <div className="h-[280px] px-4">
+                    {monthlyEvolutionStats.length > 0 ? (
+                        <div className="relative w-full h-full pt-6 pb-8">
+                            {/* Linhas Guia */}
+                            <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20 py-8">
+                                <div className="w-full h-px bg-zinc-700" />
+                                <div className="w-full h-px bg-zinc-700" />
+                                <div className="w-full h-px bg-zinc-700" />
+                            </div>
+                            
+                            {/* SVG dos Gráficos de Linha */}
+                            <div className="absolute inset-x-0 bottom-8 top-6">
+                                <svg className="w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                    <defs>
+                                        <linearGradient id="line-gradient-hours" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="#ffe500" stopOpacity="0.3" />
+                                            <stop offset="100%" stopColor="#ffe500" stopOpacity="0" />
+                                        </linearGradient>
+                                        <linearGradient id="line-gradient-points" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="#34d399" stopOpacity="0.3" />
+                                            <stop offset="100%" stopColor="#34d399" stopOpacity="0" />
+                                        </linearGradient>
+                                    </defs>
+                                    {(() => {
+                                        // Linha de Horas
+                                        const pointsHours = monthlyEvolutionStats.map(([_, data], i) => {
+                                            const x = (i / (Math.max(monthlyEvolutionStats.length - 1, 1))) * 100;
+                                            const y = 100 - ((data.minutes / maxMonthlyHours) * 100);
+                                            return `${x},${y}`;
+                                        }).join(" ");
+                                        const polygonHours = `0,100 ${pointsHours} 100,100`;
+
+                                        // Linha de Pontos
+                                        const pointsPoints = monthlyEvolutionStats.map(([_, data], i) => {
+                                            const x = (i / (Math.max(monthlyEvolutionStats.length - 1, 1))) * 100;
+                                            const y = 100 - ((data.points / maxMonthlyPoints) * 100);
+                                            return `${x},${y}`;
+                                        }).join(" ");
+                                        const polygonPoints = `0,100 ${pointsPoints} 100,100`;
+
+                                        return (
+                                            <>
+                                                {/* Pontos */}
+                                                <polygon points={polygonPoints} fill="url(#line-gradient-points)" />
+                                                <polyline points={pointsPoints} fill="none" stroke="#34d399" strokeWidth="2.5" vectorEffect="non-scaling-stroke" className="drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]" strokeLinejoin="round" />
+                                                
+                                                {/* Horas */}
+                                                <polygon points={polygonHours} fill="url(#line-gradient-hours)" />
+                                                <polyline points={pointsHours} fill="none" stroke="#ffe500" strokeWidth="2.5" vectorEffect="non-scaling-stroke" className="drop-shadow-[0_0_8px_rgba(255,229,0,0.5)]" strokeLinejoin="round" />
+                                            </>
+                                        );
+                                    })()}
+                                </svg>
+                            </div>
+                            
+                            {/* Pontos Interativos e Rótulos */}
+                            <div className="absolute inset-x-0 bottom-8 top-6 flex items-end justify-between z-10">
+                                {monthlyEvolutionStats.map(([month, data]) => {
+                                    const yPercentHours = (data.minutes / maxMonthlyHours) * 100;
+                                    const yPercentPoints = (data.points / maxMonthlyPoints) * 100;
+                                    
+                                    return (
+                                        <div key={month} className="relative h-full flex flex-col items-center w-0 group">
+                                            {/* Ponto de Horas */}
+                                            <div 
+                                                className="absolute w-3 h-3 sm:w-4 sm:h-4 bg-zinc-900 border-2 border-primary rounded-full cursor-pointer hover:scale-150 transition-all shadow-[0_0_10px_rgba(255,229,0,0.5)] z-20 -ml-1.5 sm:-ml-2"
+                                                style={{ bottom: `calc(${yPercentHours}% - 6px)` }}
+                                            >
+                                                <div className="absolute -top-10 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-zinc-800 text-[10px] font-bold text-primary px-2 py-1 rounded pointer-events-none whitespace-nowrap">
+                                                    {formatTime(data.minutes)}
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Ponto de XP */}
+                                            <div 
+                                                className="absolute w-3 h-3 sm:w-4 sm:h-4 bg-zinc-900 border-2 border-emerald-400 rounded-full cursor-pointer hover:scale-150 transition-all shadow-[0_0_10px_rgba(52,211,153,0.5)] z-20 -ml-1.5 sm:-ml-2"
+                                                style={{ bottom: `calc(${yPercentPoints}% - 6px)` }}
+                                            >
+                                                <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-zinc-800 text-[10px] font-bold text-emerald-400 px-2 py-1 rounded pointer-events-none whitespace-nowrap">
+                                                    {data.points} XP
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="text-[10px] font-black text-zinc-500 group-hover:text-white transition-colors uppercase absolute -bottom-6 sm:-bottom-8 whitespace-nowrap">
+                                                {new Date(month + "-02").toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center text-zinc-600 italic uppercase text-xs">
+                            Sem dados históricos suficientes
                         </div>
                     )}
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-                {/* Grafico Mensal de Horas (Novo) */}
-                <div className="lg:col-span-3 bg-zinc-900/40 border border-zinc-800 rounded-3xl p-8 shadow-xl">
-                    <div className="flex items-center justify-between mb-8">
-                        <div className="flex items-center gap-3">
-                            <Clock className="text-primary" size={20} />
-                            <h3 className="text-lg font-black text-white uppercase tracking-tight italic">Evolução de Horas <span className="text-primary">Mês a Mês</span></h3>
-                        </div>
-                        <div className="flex items-center gap-4 text-[10px] font-bold text-zinc-500">
-                            <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-primary" /> HISTÓRICO</div>
-                        </div>
+            {/* B. Ranking com Filtro por Usuário */}
+            <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-8 shadow-2xl relative">
+                <div className="flex items-center justify-between mb-8 relative z-10">
+                    <div className="flex items-center gap-3">
+                        <Award className="text-primary" size={24} />
+                        <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">Ranking de <span className="text-primary">Performance</span></h3>
                     </div>
-
-                    <div className="h-[240px] px-4">
-                        {monthlyHoursStats.length > 0 ? (
-                            <div className="relative w-full h-full pt-6 pb-8">
-                                {/* Linhas Guia */}
-                                <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20 py-8">
-                                    <div className="w-full h-px bg-zinc-700" />
-                                    <div className="w-full h-px bg-zinc-700" />
-                                    <div className="w-full h-px bg-zinc-700" />
-                                </div>
-                                
-                                {/* SVG do Gráfico de Linha */}
-                                <div className="absolute inset-x-0 bottom-8 top-6">
-                                    <svg className="w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
-                                        <defs>
-                                            <linearGradient id="line-gradient" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stopColor="#ffe500" stopOpacity="0.4" />
-                                                <stop offset="100%" stopColor="#ffe500" stopOpacity="0" />
-                                            </linearGradient>
-                                        </defs>
-                                        {(() => {
-                                            const points = monthlyHoursStats.map(([, minutes], i) => {
-                                                const x = (i / (Math.max(monthlyHoursStats.length - 1, 1))) * 100;
-                                                const y = 100 - ((minutes / maxMonthlyHours) * 100);
-                                                return `${x},${y}`;
-                                            }).join(" ");
-                                            
-                                            const polygonPoints = `0,100 ${points} 100,100`;
-
-                                            return (
-                                                <>
-                                                    <polygon points={polygonPoints} fill="url(#line-gradient)" />
-                                                    <polyline points={points} fill="none" stroke="#ffe500" strokeWidth="3" vectorEffect="non-scaling-stroke" className="drop-shadow-[0_0_8px_rgba(255,229,0,0.5)]" strokeLinejoin="round" />
-                                                </>
-                                            );
-                                        })()}
-                                    </svg>
-                                </div>
-                                
-                                {/* Pontos Interativos e Rótulos */}
-                                <div className="absolute inset-x-0 bottom-8 top-6 flex items-end justify-between z-10">
-                                    {monthlyHoursStats.map(([month, minutes]) => {
-                                        const yPercent = (minutes / maxMonthlyHours) * 100;
-                                        return (
-                                            <div key={month} className="relative h-full flex flex-col items-center w-0 group">
-                                                <div 
-                                                    className="absolute w-3 h-3 sm:w-4 sm:h-4 bg-zinc-900 border-2 border-primary rounded-full cursor-pointer hover:scale-150 hover:bg-primary transition-all shadow-[0_0_10px_rgba(255,229,0,0.3)] z-20 -ml-1.5 sm:-ml-2"
-                                                    style={{ bottom: `calc(${yPercent}% - 6px)` }}
-                                                >
-                                                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-zinc-800 text-[10px] font-bold text-white px-2 py-1 rounded pointer-events-none whitespace-nowrap">
-                                                        {formatTime(minutes)}
-                                                    </div>
-                                                </div>
-                                                <div className="text-[10px] font-black text-zinc-500 group-hover:text-white transition-colors uppercase absolute -bottom-6 sm:-bottom-8 whitespace-nowrap">
-                                                    {new Date(month + "-02").toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center text-zinc-600 italic uppercase text-xs">
-                                Sem dados históricos suficientes
-                            </div>
-                        )}
-                    </div>
+                    <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest hidden sm:block">Clique no associado para filtrar os dados</p>
                 </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
+                    {userRankings.map((rank, i) => (
+                        <button
+                            key={rank.user.id}
+                            onClick={() => setSelectedUserId(selectedUserId === rank.user.id ? null : rank.user.id)}
+                            className={`p-6 rounded-2xl border text-left transition-all hover:scale-[1.02] active:scale-95 duration-300 group
+                                ${selectedUserId === rank.user.id ? 'border-primary bg-primary/20 ring-2 ring-primary/20' :
+                                    i === 0 ? 'bg-primary/5 border-primary/40 shadow-[0_0_20px_rgba(255,229,0,0.05)]' : 'bg-zinc-900/40 border-zinc-800'}
+                            `}
+                        >
+                            <div className="flex items-center gap-4 mb-4">
+                                <div className="relative">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={rank.user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(rank.user.full_name || 'User')}&background=27272a&color=fff`} referrerPolicy="no-referrer" className={`w-12 h-12 rounded-full border-2 transition-all ${selectedUserId === rank.user.id ? 'border-primary grayscale-0' : 'border-zinc-700 grayscale group-hover:grayscale-0'}`} alt="" />
+                                    {i === 0 && <div className="absolute -top-2 -right-2 bg-primary text-black text-[8px] font-black px-1.5 py-0.5 rounded shadow-lg animate-bounce">#1</div>}
+                                </div>
+                                <div>
+                                    <p className="text-xs font-black text-white uppercase truncate w-24">{rank.user.full_name}</p>
+                                    <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">{rank.user.tier}</p>
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-bold text-zinc-600 uppercase">Pontuação Acumulada</p>
+                                <div className="flex items-end gap-1">
+                                    <p className={`text-2xl font-black ${i === 0 || selectedUserId === rank.user.id ? 'text-primary' : 'text-white'}`}>{rank.score}</p>
+                                    <p className="text-[10px] font-bold text-zinc-600 mb-1">PTS</p>
+                                </div>
+                            </div>
+                            <div className="mt-4 h-1 bg-zinc-800 rounded-full overflow-hidden">
+                                <div className={`h-full transition-all duration-1000 ${selectedUserId === rank.user.id ? 'bg-white' : 'bg-primary'}`} style={{ width: `${(rank.score / (userRankings[0]?.score || 1)) * 100}%` }} />
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* C. Top Clientes e Complexidade (Lado a Lado) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Top Clientes com Scroll e Ordenação */}
                 <div className="lg:col-span-2 bg-secondary border border-zinc-800 rounded-3xl p-8 shadow-xl flex flex-col">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
@@ -549,7 +739,7 @@ export function AnalyticsDashboard() {
                 </div>
 
                 {/* Perfil de Carga (Gráfico de Rosca) */}
-                <div className="bg-secondary border border-zinc-800 rounded-3xl p-8 shadow-xl">
+                <div className="lg:col-span-1 bg-secondary border border-zinc-800 rounded-3xl p-8 shadow-xl">
                     <div className="flex items-center gap-3 mb-8">
                         <Activity className="text-primary" size={20} />
                         <h3 className="text-lg font-black text-white uppercase tracking-tight">Perfil de Complexidade</h3>
@@ -612,109 +802,62 @@ export function AnalyticsDashboard() {
                         </div>
                     </div>
                 </div>
+            </div>
 
-                {/* 5. Rank de Atividades (Pontos e Frequência) */}
-                <div className="lg:col-span-3 bg-zinc-950 border border-zinc-800 rounded-3xl p-8 shadow-2xl space-y-12">
-                    
-                    {/* Atividades por Tempo */}
-                    <section>
-                        <div className="flex items-center gap-3 mb-6">
-                            <Clock className="text-primary" size={20} />
-                            <h3 className="text-lg font-black text-white uppercase tracking-tight italic">Atividades com <span className="text-primary">Mais Tempo Gasto</span></h3>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {activityStats.sortedByTime.length > 0 ? activityStats.sortedByTime.map(([name, data]) => (
-                                <div key={name} className="bg-zinc-900/30 border border-zinc-800/50 rounded-2xl p-4 hover:border-primary/30 transition-colors group">
-                                    <div className="flex justify-between items-end mb-2">
-                                        <h4 className="text-xs font-bold text-zinc-300 truncate w-2/3 group-hover:text-white transition-colors">{name}</h4>
-                                        <span className="text-xs font-black text-primary uppercase">{formatTime(data.time)}</span>
-                                    </div>
-                                    <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
-                                        <div 
-                                            className="h-full bg-primary transition-all duration-1000 ease-out"
-                                            style={{ width: `${(data.time / maxActivityTime) * 100}%` }}
-                                        />
-                                    </div>
-                                </div>
-                            )) : (
-                                <div className="col-span-2 py-8 text-center text-zinc-600 italic uppercase text-xs">Sem dados</div>
-                            )}
-                        </div>
-                    </section>
-
-                    {/* Atividades por Frequência */}
-                    <section>
-                        <div className="flex items-center gap-3 mb-6">
-                            <Activity className="text-blue-400" size={20} />
-                            <h3 className="text-lg font-black text-white uppercase tracking-tight italic">Atividades <span className="text-blue-400">Mais Frequentes</span></h3>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {activityStats.sortedByFrequency.length > 0 ? activityStats.sortedByFrequency.map(([name, data]) => (
-                                <div key={name} className="bg-zinc-900/30 border border-zinc-800/50 rounded-2xl p-4 hover:border-blue-400/30 transition-colors group">
-                                    <div className="flex justify-between items-end mb-2">
-                                        <h4 className="text-xs font-bold text-zinc-300 truncate w-2/3 group-hover:text-white transition-colors">{name}</h4>
-                                        <span className="text-xs font-black text-blue-400 uppercase">{data.count}x</span>
-                                    </div>
-                                    <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
-                                        <div 
-                                            className="h-full bg-blue-500 transition-all duration-1000 ease-out"
-                                            style={{ width: `${(data.count / maxActivityFreq) * 100}%` }}
-                                        />
-                                    </div>
-                                </div>
-                            )) : (
-                                <div className="col-span-2 py-8 text-center text-zinc-600 italic uppercase text-xs">Sem dados</div>
-                            )}
-                        </div>
-                    </section>
-                </div>
-
-                {/* Ranking com Filtro por Usuário */}
-                <div className="lg:col-span-3 bg-zinc-950 border border-zinc-800 rounded-3xl p-8 shadow-2xl relative">
-                    <div className="flex items-center justify-between mb-8 relative z-10">
-                        <div className="flex items-center gap-3">
-                            <Award className="text-primary" size={24} />
-                            <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">Ranking de <span className="text-primary">Performance</span></h3>
-                        </div>
-                        <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest hidden sm:block">Clique no associado para filtrar os dados</p>
+            {/* D/E. Rank de Atividades (Pontos e Frequência) */}
+            <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-8 shadow-2xl space-y-12">
+                
+                {/* Atividades por Tempo */}
+                <section>
+                    <div className="flex items-center gap-3 mb-6">
+                        <Clock className="text-primary" size={20} />
+                        <h3 className="text-lg font-black text-white uppercase tracking-tight italic">Atividades com <span className="text-primary">Mais Tempo Gasto</span></h3>
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
-                        {userRankings.map((rank, i) => (
-                            <button
-                                key={rank.user.id}
-                                onClick={() => setSelectedUserId(selectedUserId === rank.user.id ? null : rank.user.id)}
-                                className={`p-6 rounded-2xl border text-left transition-all hover:scale-[1.02] active:scale-95 duration-300 group
-                                    ${selectedUserId === rank.user.id ? 'border-primary bg-primary/20 ring-2 ring-primary/20' :
-                                        i === 0 ? 'bg-primary/5 border-primary/40 shadow-[0_0_20px_rgba(255,229,0,0.05)]' : 'bg-zinc-900/40 border-zinc-800'}
-                                `}
-                            >
-                                <div className="flex items-center gap-4 mb-4">
-                                    <div className="relative">
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img src={rank.user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(rank.user.full_name || 'User')}&background=27272a&color=fff`} referrerPolicy="no-referrer" className={`w-12 h-12 rounded-full border-2 transition-all ${selectedUserId === rank.user.id ? 'border-primary grayscale-0' : 'border-zinc-700 grayscale group-hover:grayscale-0'}`} alt="" />
-                                        {i === 0 && <div className="absolute -top-2 -right-2 bg-primary text-black text-[8px] font-black px-1.5 py-0.5 rounded shadow-lg animate-bounce">#1</div>}
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-black text-white uppercase truncate w-24">{rank.user.full_name}</p>
-                                        <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">{rank.user.tier}</p>
-                                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {activityStats.sortedByTime.length > 0 ? activityStats.sortedByTime.map(([name, data]) => (
+                            <div key={name} className="bg-zinc-900/30 border border-zinc-800/50 rounded-2xl p-4 hover:border-primary/30 transition-colors group">
+                                <div className="flex justify-between items-end mb-2">
+                                    <h4 className="text-xs font-bold text-zinc-300 truncate w-2/3 group-hover:text-white transition-colors">{name}</h4>
+                                    <span className="text-xs font-black text-primary uppercase">{formatTime(data.time)}</span>
                                 </div>
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-zinc-600 uppercase">Pontuação Acumulada</p>
-                                    <div className="flex items-end gap-1">
-                                        <p className={`text-2xl font-black ${i === 0 || selectedUserId === rank.user.id ? 'text-primary' : 'text-white'}`}>{rank.score}</p>
-                                        <p className="text-[10px] font-bold text-zinc-600 mb-1">PTS</p>
-                                    </div>
+                                <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
+                                    <div 
+                                        className="h-full bg-primary transition-all duration-1000 ease-out"
+                                        style={{ width: `${(data.time / maxActivityTime) * 100}%` }}
+                                    />
                                 </div>
-                                <div className="mt-4 h-1 bg-zinc-800 rounded-full overflow-hidden">
-                                    <div className={`h-full transition-all duration-1000 ${selectedUserId === rank.user.id ? 'bg-white' : 'bg-primary'}`} style={{ width: `${(rank.score / (userRankings[0]?.score || 1)) * 100}%` }} />
-                                </div>
-                            </button>
-                        ))}
+                            </div>
+                        )) : (
+                            <div className="col-span-2 py-8 text-center text-zinc-600 italic uppercase text-xs">Sem dados</div>
+                        )}
                     </div>
-                </div>
+                </section>
 
+                {/* Atividades por Frequência */}
+                <section>
+                    <div className="flex items-center gap-3 mb-6">
+                        <Activity className="text-blue-400" size={20} />
+                        <h3 className="text-lg font-black text-white uppercase tracking-tight italic">Atividades <span className="text-blue-400">Mais Frequentes</span></h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {activityStats.sortedByFrequency.length > 0 ? activityStats.sortedByFrequency.map(([name, data]) => (
+                            <div key={name} className="bg-zinc-900/30 border border-zinc-800/50 rounded-2xl p-4 hover:border-blue-400/30 transition-colors group">
+                                <div className="flex justify-between items-end mb-2">
+                                    <h4 className="text-xs font-bold text-zinc-300 truncate w-2/3 group-hover:text-white transition-colors">{name}</h4>
+                                    <span className="text-xs font-black text-blue-400 uppercase">{data.count}x</span>
+                                </div>
+                                <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
+                                    <div 
+                                        className="h-full bg-blue-500 transition-all duration-1000 ease-out"
+                                        style={{ width: `${(data.count / maxActivityFreq) * 100}%` }}
+                                    />
+                                </div>
+                            </div>
+                        )) : (
+                            <div className="col-span-2 py-8 text-center text-zinc-600 italic uppercase text-xs">Sem dados</div>
+                        )}
+                    </div>
+                </section>
             </div>
         </div>
     );

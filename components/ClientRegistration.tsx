@@ -12,10 +12,10 @@ export function ClientRegistration() {
     const [searchTerm, setSearchTerm] = useState("");
     const [isAdding, setIsAdding] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [newClient, setNewClient] = useState({ name: "", email: "", phone: "" });
+    const [newClient, setNewClient] = useState({ name: "", email: "", phone: "", emoji: "" });
 
     const handleEditClick = (client: Client) => {
-        setNewClient({ name: client.name, email: client.email || "", phone: client.phone || "" });
+        setNewClient({ name: client.name, email: client.email || "", phone: client.phone || "", emoji: client.emoji || "" });
         setEditingId(client.id);
         setIsAdding(true);
     };
@@ -42,7 +42,7 @@ export function ClientRegistration() {
                     created_at: new Date().toISOString()
                 });
             }
-            setNewClient({ name: "", email: "", phone: "" });
+            setNewClient({ name: "", email: "", phone: "", emoji: "" });
             setIsAdding(false);
         } catch (error) {
             console.error("Error adding client:", error);
@@ -80,7 +80,7 @@ export function ClientRegistration() {
                         if (isAdding) {
                             setIsAdding(false);
                             setEditingId(null);
-                            setNewClient({ name: "", email: "", phone: "" });
+                            setNewClient({ name: "", email: "", phone: "", emoji: "" });
                         } else {
                             setIsAdding(true);
                         }
@@ -93,8 +93,19 @@ export function ClientRegistration() {
 
             {isAdding && (
                 <form onSubmit={handleAddClient} className="bg-zinc-900/40 border border-zinc-800 p-6 rounded-2xl animate-in zoom-in-95 duration-300">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div className="space-y-1.5 text-left">
+                            <label className="text-[10px] font-bold text-zinc-500 uppercase ml-1">Emoji</label>
+                            <input
+                                type="text"
+                                maxLength={4}
+                                placeholder="🏢"
+                                value={newClient.emoji}
+                                onChange={(e) => setNewClient({ ...newClient, emoji: e.target.value })}
+                                className="w-full bg-black/50 border border-zinc-700 rounded-lg px-4 py-2 text-white text-center text-xl focus:border-primary outline-none transition-all"
+                            />
+                        </div>
+                        <div className="space-y-1.5 text-left md:col-span-1">
                             <label className="text-[10px] font-bold text-zinc-500 uppercase ml-1">Nome Completo</label>
                             <input
                                 required
@@ -157,8 +168,8 @@ export function ClientRegistration() {
                         >
                             <div className="flex flex-col gap-3">
                                 <div className="flex items-start justify-between">
-                                    <div className="h-10 w-10 rounded-full bg-primary/20 border border-primary/20 flex items-center justify-center text-primary font-bold">
-                                        {client.name.charAt(0).toUpperCase()}
+                                    <div className="h-10 w-10 rounded-full bg-primary/20 border border-primary/20 flex items-center justify-center text-primary font-bold text-xl">
+                                        {client.emoji || client.name.charAt(0).toUpperCase()}
                                     </div>
                                     <div className="flex gap-1">
                                         <button

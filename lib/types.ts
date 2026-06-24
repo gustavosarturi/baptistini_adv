@@ -26,6 +26,7 @@ export type Client = {
     name: string;
     email?: string;
     phone?: string;
+    emoji?: string;
     created_at: string;
 };
 
